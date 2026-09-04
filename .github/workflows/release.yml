@@ -1,0 +1,91 @@
+name: release
+
+# Tag a version and this does the rest:
+#
+#     git tag v1.0.1
+#     git push origin v1.0.1
+#
+# The tag has to match core/version.py, the tests have to pass, and only then
+# is anything built or published.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Check the tag matches core/version.py
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}" -replace '^v', ''
+          $version = python -c "from core.version import __version__; print(__version__)"
+          if ($tag -ne $version) {
+            Write-Error "Tag $tag does not match core/version.py ($version)"
+            exit 1
+          }
+          Write-Host "Building version $version"
+
+      - name: Run the test suite
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -m unittest discover -s tests -t . -v
+
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: Build the app and the installer
+        run: python tools/build.py --clean
+
+      - name: Collect the installer
+        id: collect
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem dist -Filter "*-Setup.exe" | Select-Object -First 1
+          if (-not $installer) { Write-Error "No installer was produced"; exit 1 }
+          "installer=$($installer.FullName)" >> $env:GITHUB_OUTPUT
+          "name=$($installer.Name)" >> $env:GITHUB_OUTPUT
+          Write-Host "Built $($installer.Name) ($([math]::Round($installer.Length/1MB,1)) MB)"
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $notes = @"
+          ## Neeko's Little Draft Assistant ${{ github.ref_name }}
+
+          Download **${{ steps.collect.outputs.name }}** below and run it.
+          Already have it installed? The app updates itself.
+
+          Your settings, champions and draft message are kept across updates.
+          "@
+          gh release create "${{ github.ref_name }}" `
+            "${{ steps.collect.outputs.installer }}" `
+            --title "Neeko's Little Draft Assistant ${{ github.ref_name }}" `
+            --notes "$notes"
+
+      - name: Keep the build for inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: NeekoDraftAssistant-${{ github.ref_name }}
+          path: dist/*-Setup.exe
+          retention-days: 30
