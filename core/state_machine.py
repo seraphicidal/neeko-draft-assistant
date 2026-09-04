@@ -74,6 +74,7 @@ class Decision:
     detail: str = ""
     problem: str = ""
     turn: str = ""
+    countdown: float = 0.0   # seconds left before the accept fires
 
 
 @dataclass
@@ -212,7 +213,11 @@ class StateMachine:
         waited = snapshot.now - self._pop_seen_at
         remaining = settings.accept_delay - waited
         if remaining > 0:
-            return Decision(AppState.READY_CHECK, detail=f"Accepting in {remaining:.1f}s")
+            return Decision(
+                AppState.READY_CHECK,
+                detail=f"Accepting in {remaining:.1f}s",
+                countdown=remaining,
+            )
         if not attempt.allow(snapshot.now):
             return Decision(AppState.READY_CHECK, detail="Accepting...")
 

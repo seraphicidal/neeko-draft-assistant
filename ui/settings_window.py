@@ -1,4 +1,8 @@
-"""Settings: a sidebar and one page at a time, deliberately unlike the dashboard."""
+"""Settings: a sidebar, one page at a time, every row explaining itself.
+
+Deliberately a different shape from the dashboard -- this is where you configure
+the app, not where you watch it work.
+"""
 
 from __future__ import annotations
 
@@ -6,15 +10,13 @@ import os
 import subprocess
 import sys
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QUrl, Qt, Signal
 from PySide6.QtGui import QDesktopServices, QTextCursor
-from PySide6.QtCore import QUrl
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
     QFrame,
     QHBoxLayout,
-    QLabel,
     QLineEdit,
     QListWidget,
     QListWidgetItem,
@@ -30,9 +32,9 @@ from core import startup
 from core.settings import CONFIG_DIR, MAX_DELAY
 from core.version import APP_NAME, GITHUB_URL, __version__
 from ui import assets, theme
-from ui.widgets import Hairline, Slider, SwitchRow, caption, label
+from ui.widgets import Divider, SettingRow, Slider, caption, text
 
-SECTIONS = ["General", "Queue", "Champion select", "Chat", "Updates", "Advanced", "About"]
+SECTIONS = ["General", "Queue", "Champion select", "Draft chat", "Updates", "Advanced", "About"]
 
 
 class SettingsWindow(QDialog):
@@ -47,17 +49,18 @@ class SettingsWindow(QDialog):
         self._building = True
 
         self.setWindowTitle(f"Settings - {APP_NAME}")
-        self.resize(720, 560)
-        self.setMinimumSize(660, 500)
+        self.resize(740, 580)
+        self.setMinimumSize(680, 520)
         self.setStyleSheet(theme.stylesheet())
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-
+        # The sidebar wires itself to the page stack, so the stack has to exist
+        # before the sidebar is built.
+        self.pages = QStackedWidget()
         layout.addWidget(self._build_sidebar())
 
-        self.pages = QStackedWidget()
         for builder in (
             self._page_general,
             self._page_queue,
@@ -74,40 +77,42 @@ class SettingsWindow(QDialog):
         self._building = False
         self.refresh_log()
 
-    # -- chrome ------------------------------------------------------------
+    # -------------------------------------------------------------- chrome ---
 
     def _build_sidebar(self) -> QWidget:
         panel = QFrame()
-        panel.setFixedWidth(178)
+        panel.setFixedWidth(186)
         panel.setStyleSheet(
-            f"background: {theme.NAVY_850}; border-right: 1px solid {theme.LINE};"
+            f"background: {theme.SURFACE}; border-right: 1px solid {theme.BORDER};"
         )
-        layout = QVBoxLayout(panel)
-        layout.setContentsMargins(14, 18, 14, 16)
-        layout.setSpacing(12)
-
-        heading = label("Settings", "title")
-        layout.addWidget(heading)
+        column = QVBoxLayout(panel)
+        column.setContentsMargins(theme.SPACE_3, theme.SPACE_5, theme.SPACE_3, theme.SPACE_4)
+        column.setSpacing(theme.SPACE_4)
+        column.addWidget(text("Settings", "title"))
 
         self.nav = QListWidget()
+        self.nav.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.nav.setStyleSheet(
             f"""
-            QListWidget {{ background: transparent; border: none; padding: 0; }}
-            QListWidget::item {{ padding: 8px 10px; border-radius: 8px; color: {theme.MUTED}; }}
-            QListWidget::item:hover {{ background: {theme.NAVY_800}; color: {theme.TEXT}; }}
+            QListWidget {{ background: transparent; border: none; }}
+            QListWidget::item {{
+                padding: 9px 11px; border-radius: {theme.RADIUS_SM}px;
+                color: {theme.TEXT_SECONDARY};
+            }}
+            QListWidget::item:hover {{ background: {theme.SURFACE_HOVER};
+                                       color: {theme.TEXT_PRIMARY}; }}
             QListWidget::item:selected {{
-                background: {theme.rgba(theme.ORANGE, 0.18)};
-                color: {theme.CREAM};
+                background: {theme.rgba(theme.ACCENT, 0.16)};
+                color: {theme.TEXT_PRIMARY};
                 font-weight: 600;
             }}
             """
         )
         for name in SECTIONS:
             self.nav.addItem(QListWidgetItem(name))
-        self.nav.currentRowChanged.connect(lambda index: self.pages.setCurrentIndex(index))
-        layout.addWidget(self.nav, 1)
-
-        layout.addWidget(label(f"v{__version__}", "small"))
+        self.nav.currentRowChanged.connect(self.pages.setCurrentIndex)
+        column.addWidget(self.nav, 1)
+        column.addWidget(text(f"v{__version__}", "small"))
         return panel
 
     def _scrollable(self, page: QWidget) -> QScrollArea:
@@ -120,19 +125,21 @@ class SettingsWindow(QDialog):
 
     def _page(self, title: str, blurb: str = "") -> tuple[QWidget, QVBoxLayout]:
         page = QWidget()
-        layout = QVBoxLayout(page)
-        layout.setContentsMargins(28, 24, 28, 24)
-        layout.setSpacing(12)
-        layout.addWidget(label(title, "title"))
+        column = QVBoxLayout(page)
+        column.setContentsMargins(theme.SPACE_6, theme.SPACE_6, theme.SPACE_6, theme.SPACE_6)
+        column.setSpacing(theme.SPACE_2)
+        column.addWidget(text(title, "title"))
         if blurb:
-            note = label(blurb, "muted")
+            note = text(blurb, "secondary")
             note.setWordWrap(True)
-            layout.addWidget(note)
-        layout.addWidget(Hairline())
-        return page, layout
+            column.addWidget(note)
+        column.addSpacing(theme.SPACE_2)
+        column.addWidget(Divider())
+        return page, column
 
-    def _switch(self, layout: QVBoxLayout, text: str, attribute: str, note: str = "", on_change=None):
-        control = SwitchRow(text, bool(getattr(self.settings, attribute)), note=note)
+    def _row(self, column: QVBoxLayout, title: str, description: str, attribute: str,
+             on_change=None) -> SettingRow:
+        control = SettingRow(title, description, bool(getattr(self.settings, attribute)))
 
         def handler(value: bool) -> None:
             if self._building:
@@ -144,113 +151,128 @@ class SettingsWindow(QDialog):
             self.changed.emit()
 
         control.toggled.connect(handler)
-        layout.addWidget(control)
+        column.addWidget(control)
         return control
 
-    # -- pages --------------------------------------------------------------
+    # --------------------------------------------------------------- pages ---
 
     def _page_general(self) -> QWidget:
-        page, layout = self._page("General", "How the app behaves on your desktop.")
+        page, column = self._page("General", "How the app behaves on your desktop.")
 
-        self.startup_row = SwitchRow(
-            "Start with Windows", startup.is_enabled(),
-            note="Adds a shortcut to your Startup folder.",
+        self.startup_row = SettingRow(
+            "Start with Windows",
+            "Adds a shortcut to your Startup folder.",
+            startup.is_enabled(),
         )
         self.startup_row.toggled.connect(self._on_startup)
-        layout.addWidget(self.startup_row)
+        column.addWidget(self.startup_row)
 
-        self._switch(layout, "Launch minimized", "launch_minimized",
-                     "Start straight into the tray, without opening the window.")
-        self._switch(layout, "Minimize to tray on close", "minimize_to_tray",
-                     "Closing the window keeps Neeko watching in the background.")
-        self._switch(layout, "Animations", "animations",
-                     "Neeko's glow, the switches and the timer bar.")
+        self._row(column, "Launch minimized",
+                  "Start straight into the tray without opening the window.",
+                  "launch_minimized")
+        self._row(column, "Minimize to tray on close",
+                  "Closing the window keeps Neeko watching in the background.",
+                  "minimize_to_tray")
+        self._row(column, "Animations",
+                  "Neeko's idle motion, the switches and the status dot.",
+                  "animations")
 
-        self.startup_note = label("", "danger")
+        self.startup_note = text("", "error")
         self.startup_note.hide()
-        layout.addWidget(self.startup_note)
-        layout.addStretch(1)
+        column.addWidget(self.startup_note)
+        column.addStretch(1)
         return page
 
     def _page_queue(self) -> QWidget:
-        page, layout = self._page("Queue", "What happens when a match is found.")
-        self._switch(layout, "Auto accept queue", "auto_accept")
+        page, column = self._page("Queue", "What happens when a match is found.")
+        self._row(column, "Auto accept", "Answer the ready check for you.", "auto_accept")
 
-        layout.addSpacing(6)
+        column.addSpacing(theme.SPACE_3)
         head = QHBoxLayout()
-        head.addWidget(label("Accept delay", "body"))
-        head.addStretch(1)
-        self.delay_value = label("", "accent")
+        head.addWidget(text("Accept after", "body-strong"), 1)
+        self.delay_value = text("", "accent")
         head.addWidget(self.delay_value)
-        layout.addLayout(head)
+        column.addLayout(head)
 
         self.delay_slider = Slider(self.settings.accept_delay, MAX_DELAY, 0.5)
         self.delay_slider.valueChanged.connect(self._on_delay)
-        layout.addWidget(self.delay_slider)
-        self._render_delay(self.settings.accept_delay)
-        hint = label("A delay leaves you room to decline before Neeko presses accept.", "small")
-        hint.setWordWrap(True)
-        layout.addWidget(hint)
+        column.addWidget(self.delay_slider)
 
-        layout.addSpacing(6)
-        self._switch(layout, "Sound on accept", "sound", "Two short tones when a queue is answered.")
-        layout.addStretch(1)
+        scale = QHBoxLayout()
+        scale.addWidget(text("0s", "small"))
+        scale.addStretch(1)
+        scale.addWidget(text(f"{MAX_DELAY:.0f}s", "small"))
+        column.addLayout(scale)
+        self._render_delay(self.settings.accept_delay)
+
+        hint = text("A delay leaves you room to decline before Neeko presses accept.", "small")
+        hint.setWordWrap(True)
+        column.addWidget(hint)
+
+        column.addSpacing(theme.SPACE_3)
+        self._row(column, "Sound on accept", "Two short tones when a queue is answered.", "sound")
+        column.addStretch(1)
         return page
 
     def _page_champion(self) -> QWidget:
-        page, layout = self._page(
-            "Champion select", "Neeko only ever acts when the client says it is your turn."
+        page, column = self._page(
+            "Champion select",
+            "Neeko only ever acts when the client says the action is yours.",
         )
-        self._switch(layout, "Auto declare champion", "auto_declare",
-                     "Hovers your champion so the team can see it. Commits to nothing.")
-        self._switch(layout, "Auto lock in", "auto_pick",
-                     "Locks the pick the moment it becomes yours. This cannot be undone.")
+        self._row(column, "Auto declare",
+                  "Hover your champion so the team can see it. Commits to nothing.",
+                  "auto_declare")
+        self._row(column, "Auto lock-in",
+                  "Lock the pick in the moment it becomes yours. This cannot be undone.",
+                  "auto_pick")
 
-        layout.addSpacing(8)
-        layout.addWidget(caption("Chosen champions"))
-        self.champion_summary = label("", "muted")
+        column.addSpacing(theme.SPACE_3)
+        column.addWidget(caption("Chosen champions"))
+        self.champion_summary = text("", "secondary")
         self.champion_summary.setWordWrap(True)
-        layout.addWidget(self.champion_summary)
-        layout.addWidget(label("Pick them in the main window.", "small"))
-        layout.addStretch(1)
+        column.addWidget(self.champion_summary)
+        column.addWidget(text("Pick them on the dashboard.", "small"))
+        column.addStretch(1)
         return page
 
     def _page_chat(self) -> QWidget:
-        page, layout = self._page("Chat", "One line, once per champion select.")
-        self._switch(layout, "Send automatically", "chat_enabled")
+        page, column = self._page("Draft chat", "One line, once per champion select.")
+        self._row(column, "Send automatically",
+                  "Posted as soon as the draft chat room opens.", "chat_enabled")
 
-        layout.addSpacing(6)
-        layout.addWidget(caption("Message"))
+        column.addSpacing(theme.SPACE_3)
+        column.addWidget(caption("Message"))
         self.message_edit = QLineEdit(self.settings.chat_message)
-        self.message_edit.setPlaceholderText("say something in champion select")
+        self.message_edit.setPlaceholderText("Say something in champion select")
         self.message_edit.setMaxLength(200)
         self.message_edit.textChanged.connect(self._on_message)
-        layout.addWidget(self.message_edit)
-        note = label(
-            "If it fails three times Neeko stops trying, so the chat is never spammed.", "small"
+        column.addWidget(self.message_edit)
+
+        note = text(
+            "If it fails three times Neeko stops trying, so the chat is never spammed.",
+            "small",
         )
         note.setWordWrap(True)
-        layout.addWidget(note)
-        layout.addStretch(1)
+        column.addWidget(note)
+        column.addStretch(1)
         return page
 
     def _page_updates(self) -> QWidget:
-        page, layout = self._page("Updates", "New versions come from GitHub Releases.")
+        page, column = self._page("Updates", "New versions come from GitHub Releases.")
 
-        version_row = QHBoxLayout()
-        version_row.addWidget(label("Installed version", "body"))
-        version_row.addStretch(1)
-        version_row.addWidget(label(f"v{__version__}", "accent"))
-        layout.addLayout(version_row)
+        installed = QHBoxLayout()
+        installed.addWidget(text("Installed version", "body-strong"), 1)
+        installed.addWidget(text(f"v{__version__}", "accent"))
+        column.addLayout(installed)
 
-        self.update_status = label("Not checked yet.", "muted")
+        self.update_status = text("Not checked yet.", "secondary")
         self.update_status.setWordWrap(True)
-        layout.addWidget(self.update_status)
+        column.addWidget(self.update_status)
 
+        column.addSpacing(theme.SPACE_2)
         buttons = QHBoxLayout()
-        buttons.setSpacing(8)
+        buttons.setSpacing(theme.SPACE_2)
         self.check_button = QPushButton("Check for updates")
-        self.check_button.setObjectName("quiet")
         self.check_button.clicked.connect(self.check_updates.emit)
         buttons.addWidget(self.check_button)
 
@@ -260,94 +282,96 @@ class SettingsWindow(QDialog):
         self.install_button.hide()
         buttons.addWidget(self.install_button)
         buttons.addStretch(1)
-        layout.addLayout(buttons)
+        column.addLayout(buttons)
 
-        layout.addSpacing(6)
-        self._switch(layout, "Check automatically", "auto_check_updates",
-                     "Once at startup, then every few hours. Never during a draft or a game.")
+        column.addSpacing(theme.SPACE_2)
+        self._row(column, "Check automatically",
+                  "Once at startup, then every few hours. Never during a draft or a game.",
+                  "auto_check_updates")
 
-        layout.addSpacing(8)
+        column.addSpacing(theme.SPACE_2)
+        column.addWidget(caption("Release notes"))
         self.release_notes = QTextEdit()
         self.release_notes.setReadOnly(True)
-        self.release_notes.setMinimumHeight(140)
-        self.release_notes.setPlaceholderText("Release notes appear here.")
-        layout.addWidget(self.release_notes, 1)
+        self.release_notes.setMinimumHeight(130)
+        self.release_notes.setPlaceholderText("Notes for the next version appear here.")
+        column.addWidget(self.release_notes, 1)
         return page
 
     def _page_advanced(self) -> QWidget:
-        page, layout = self._page("Advanced", "For when something is not behaving.")
+        page, column = self._page("Advanced", "For when something is not behaving.")
 
-        level_row = QHBoxLayout()
-        level_row.addWidget(label("Log level", "body"))
-        level_row.addStretch(1)
+        level = QHBoxLayout()
+        names = QVBoxLayout()
+        names.setSpacing(1)
+        names.addWidget(text("Log level", "body-strong"))
+        names.addWidget(text("Debug records every state change and request.", "small"))
+        level.addLayout(names, 1)
         self.level_box = QComboBox()
         self.level_box.addItems(["Normal", "Debug"])
         self.level_box.setCurrentIndex(1 if self.settings.debug_logging else 0)
         self.level_box.currentIndexChanged.connect(self._on_level)
-        level_row.addWidget(self.level_box)
-        layout.addLayout(level_row)
+        level.addWidget(self.level_box)
+        column.addLayout(level)
 
+        column.addSpacing(theme.SPACE_3)
+        column.addWidget(caption("Activity log"))
         self.log_view = QTextEdit()
         self.log_view.setReadOnly(True)
-        self.log_view.setMinimumHeight(220)
-        layout.addWidget(self.log_view, 1)
+        self.log_view.setMinimumHeight(210)
+        column.addWidget(self.log_view, 1)
 
         buttons = QHBoxLayout()
-        buttons.setSpacing(8)
+        buttons.setSpacing(theme.SPACE_2)
         buttons.addStretch(1)
-        for text, handler in (
+        for title, handler in (
             ("Open config folder", self._open_config_folder),
             ("Refresh", self.refresh_log),
             ("Clear", self._clear_log),
         ):
-            button = QPushButton(text)
-            button.setObjectName("quiet")
+            button = QPushButton(title)
             button.clicked.connect(handler)
             buttons.addWidget(button)
-        layout.addLayout(buttons)
+        column.addLayout(buttons)
         return page
 
     def _page_about(self) -> QWidget:
-        page, layout = self._page("About")
-
-        layout.addWidget(label(APP_NAME, "display"))
-        layout.addWidget(label(f"Version {__version__}", "accent"))
-        made_for = label("Made for Miska.", "muted")
-        layout.addWidget(made_for)
+        page, column = self._page("About")
+        column.addWidget(text(APP_NAME, "display"))
+        column.addWidget(text(f"Version {__version__}", "accent"))
+        column.addWidget(text("Made for Miska.", "secondary"))
 
         link = QPushButton(GITHUB_URL)
         link.setObjectName("link")
         link.setCursor(Qt.CursorShape.PointingHandCursor)
         link.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(GITHUB_URL)))
-        layout.addWidget(link, 0, Qt.AlignmentFlag.AlignLeft)
+        column.addWidget(link, 0, Qt.AlignmentFlag.AlignLeft)
 
-        layout.addSpacing(10)
-        layout.addWidget(caption("Neeko art"))
-        intro = label(
-            f"Drop your own pictures into {assets.NEEKO.name}\\ next to the app and restart. "
-            "Missing files fall back to what ships with the assistant.",
+        column.addSpacing(theme.SPACE_4)
+        column.addWidget(caption("Neeko art"))
+        intro = text(
+            "Drop your own pictures into the neeko folder beside the app and restart. "
+            "Anything missing falls back to what ships with the assistant.",
             "small",
         )
         intro.setWordWrap(True)
-        layout.addWidget(intro)
+        column.addWidget(intro)
 
-        for slots, name, purpose in assets.SLOT_HELP:
-            present = assets.first_existing(slots)
+        for filename, purpose, present in assets.slot_help():
             mark = "✓" if present else "·"
-            entry = label(f"   {mark}  {name} — {purpose}", "small")
+            entry = text(f"   {mark}  {filename} — {purpose}", "small")
             entry.setStyleSheet(
-                f"color: {theme.SUCCESS if present else theme.DIM}; font-size: 11px;"
+                theme.font_css("small", theme.SUCCESS if present else theme.TEXT_MUTED)
             )
             entry.setWordWrap(True)
-            layout.addWidget(entry)
-
-        layout.addStretch(1)
+            column.addWidget(entry)
+        column.addStretch(1)
         return page
 
-    # -- handlers ------------------------------------------------------------
+    # ------------------------------------------------------------ handlers ---
 
     def _render_delay(self, value: float) -> None:
-        self.delay_value.setText("instantly" if value == 0 else f"{value:.1f}s")
+        self.delay_value.setText("instantly" if value == 0 else f"{value:.1f} seconds")
 
     def _on_delay(self, value: float) -> None:
         self._render_delay(value)
@@ -357,10 +381,10 @@ class SettingsWindow(QDialog):
         self.settings.save()
         self.changed.emit()
 
-    def _on_message(self, text: str) -> None:
+    def _on_message(self, value: str) -> None:
         if self._building:
             return
-        self.settings.chat_message = text
+        self.settings.chat_message = value
         self.settings.save()
         self.changed.emit()
 
@@ -385,7 +409,7 @@ class SettingsWindow(QDialog):
     def _open_config_folder(self) -> None:
         try:
             if sys.platform == "win32":
-                os.startfile(CONFIG_DIR)  # noqa: S606 - opening the user's own folder
+                os.startfile(CONFIG_DIR)  # noqa: S606 - the user's own folder
             else:
                 subprocess.Popen(["xdg-open", str(CONFIG_DIR)])
         except OSError:
@@ -395,21 +419,21 @@ class SettingsWindow(QDialog):
         self.log.clear()
         self.refresh_log()
 
-    # -- live views ------------------------------------------------------------
+    # ---------------------------------------------------------- live views ---
 
     def refresh_log(self) -> None:
         self.log_view.setPlainText(self.log.as_text())
         self.log_view.moveCursor(QTextCursor.MoveOperation.End)
 
-    def append_log(self, text: str) -> None:
+    def append_log(self, line: str) -> None:
         if not self.isVisible():
             return
-        self.log_view.append(text)
+        self.log_view.append(line)
         self.log_view.moveCursor(QTextCursor.MoveOperation.End)
 
-    def show_update_state(self, text: str, tint: str = theme.MUTED, release=None) -> None:
-        self.update_status.setText(text)
-        self.update_status.setStyleSheet(f"color: {tint}; font-size: 12px;")
+    def show_update_state(self, message: str, tone: str = theme.TEXT_SECONDARY, release=None) -> None:
+        self.update_status.setText(message)
+        self.update_status.setStyleSheet(theme.font_css("secondary", tone))
         self.install_button.setVisible(release is not None)
         if release is not None and release.notes:
             self.release_notes.setPlainText(release.notes)
@@ -422,7 +446,7 @@ class SettingsWindow(QDialog):
         self._building = True
         preferred = self.settings.preferred_champion_name or "nobody yet"
         backup = self.settings.backup_champion_name or "none"
-        self.champion_summary.setText(f"Preferred: {preferred}\nBackup: {backup}")
+        self.champion_summary.setText(f"Primary: {preferred}\nBackup: {backup}")
         self.message_edit.setText(self.settings.chat_message)
         self.delay_slider.setValue(self.settings.accept_delay)
         self._render_delay(self.settings.accept_delay)
