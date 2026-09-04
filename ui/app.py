@@ -118,7 +118,7 @@ class Application:
         if self.pending_update is not None:
             self.settings_window.show_update_state(
                 f"Version {self.pending_update.version} is ready to install.",
-                theme.ORANGE,
+                theme.ACCENT,
                 self.pending_update,
             )
         self.settings_window.show()
@@ -226,7 +226,7 @@ class Application:
         self.log.add("info", f"Update available: {release.version}")
         if self.settings_window is not None:
             self.settings_window.show_update_state(
-                f"Version {release.version} is available.", theme.ORANGE, release
+                f"Version {release.version} is available.", theme.ACCENT, release
             )
         if not updater.is_busy(self.busy_state):
             self.window.offer_update(release)

@@ -57,6 +57,7 @@ class StatusView:
     problem: str = ""
     turn: str = ""
     time_left: float = 0.0
+    accept_in: float = 0.0
     in_draft: bool = False
     chat_sent: bool = False
     chat_failed: bool = False
@@ -239,6 +240,7 @@ class Watcher(threading.Thread):
                 problem=decision.problem,
                 turn=decision.turn,
                 time_left=snapshot.session.time_left if snapshot.session else 0.0,
+                accept_in=decision.countdown,
                 in_draft=snapshot.session is not None,
                 chat_sent=self.machine.chat_sent,
                 chat_failed=self.machine.chat_failed,

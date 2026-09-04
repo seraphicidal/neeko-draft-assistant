@@ -1,8 +1,8 @@
-"""The painted parts of the interface.
+"""The component library.
 
-Qt's stock controls are styled in `theme.py`; everything with real shape --
-switches, the slider, the status pill, the champion showcase, Neeko's avatar --
-is drawn here so the app does not look like a form.
+Stock Qt controls are styled in `theme.py`. Everything with real shape is drawn
+here, from tokens rather than hand-picked numbers, so the interface stays
+consistent and a change to the design system lands everywhere at once.
 """
 
 from __future__ import annotations
@@ -33,6 +33,7 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import (
     QAbstractButton,
+    QFrame,
     QGraphicsOpacityEffect,
     QHBoxLayout,
     QLabel,
@@ -45,6 +46,8 @@ from PySide6.QtWidgets import (
 )
 
 from ui import theme
+
+# --------------------------------------------------------------- helpers ---
 
 
 def colour(value: str, alpha: float = 1.0) -> QColor:
@@ -63,47 +66,126 @@ def blend(start: QColor, end: QColor, amount: float) -> QColor:
     )
 
 
-def label(text: str = "", kind: str = "body", parent: QWidget | None = None) -> QLabel:
-    widget = QLabel(text, parent)
-    widget.setObjectName(kind)
+def text(content: str = "", role: str = "body", parent: QWidget | None = None) -> QLabel:
+    """A label that takes its size, weight and colour from the type scale."""
+    widget = QLabel(content, parent)
+    widget.setObjectName(role)
     widget.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
     return widget
 
 
-def caption(text: str) -> QLabel:
-    return label(text.upper(), "caption")
+def caption(content: str) -> QLabel:
+    return text(content.upper(), "caption")
 
 
-class Hairline(QWidget):
-    """A one pixel separator -- grouping without another box."""
+def load_pixmap(path: Path | None) -> QPixmap | None:
+    if path is None or not Path(path).exists():
+        return None
+    pixmap = QPixmap(str(path))
+    return None if pixmap.isNull() else pixmap
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+
+def paint_shadow(painter: QPainter, rect: QRectF, radius: int, spread: int = 14) -> None:
+    """A soft shadow drawn by hand.
+
+    QGraphicsDropShadowEffect caches the widget it decorates, and that cache
+    goes stale whenever children appear, move or resize -- which showed up as
+    duplicated, offset content. Painting the shadow costs a few rounded rects
+    and has no such problem.
+    """
+    painter.setPen(Qt.PenStyle.NoPen)
+    for step in range(spread, 0, -1):
+        alpha = 0.030 * (1.0 - step / (spread + 1))
+        painter.setBrush(colour("#000000", alpha))
+        painter.drawRoundedRect(
+            rect.adjusted(-step, -step + 2, step, step + 3), radius + step, radius + step
+        )
+
+
+# ------------------------------------------------------------ primitives ---
+
+
+class Divider(QWidget):
+    """A hairline. Grouping without drawing another box."""
+
+    def __init__(self, inset: int = 0, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setFixedHeight(1)
+        self._inset = inset
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
     def paintEvent(self, _event) -> None:  # noqa: N802 - Qt naming
         painter = QPainter(self)
-        gradient = QLinearGradient(0, 0, self.width(), 0)
-        gradient.setColorAt(0.0, colour(theme.LINE, 0.0))
-        gradient.setColorAt(0.15, colour(theme.LINE, 1.0))
-        gradient.setColorAt(0.85, colour(theme.LINE, 1.0))
-        gradient.setColorAt(1.0, colour(theme.LINE, 0.0))
-        painter.fillRect(self.rect(), gradient)
+        painter.fillRect(
+            QRect(self._inset, 0, max(0, self.width() - 2 * self._inset), 1),
+            colour(theme.BORDER),
+        )
 
 
-class Switch(QAbstractButton):
-    """Compact toggle. Orange when on, quiet navy when off."""
+class WindowButton(QAbstractButton):
+    """Minimise and close, drawn rather than typed as glyphs."""
 
-    def __init__(self, parent: QWidget | None = None, width: int = 42) -> None:
+    MINIMISE = "minimise"
+    CLOSE = "close"
+
+    def __init__(self, kind: str, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.kind = kind
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setFixedSize(30, 26)
+        self.setFocusPolicy(Qt.FocusPolicy.TabFocus)
+        self.setAccessibleName("Minimise" if kind == self.MINIMISE else "Close")
+        self._hover = False
+
+    def enterEvent(self, _event) -> None:  # noqa: N802 - Qt naming
+        self._hover = True
+        self.update()
+
+    def leaveEvent(self, _event) -> None:  # noqa: N802 - Qt naming
+        self._hover = False
+        self.update()
+
+    def paintEvent(self, _event) -> None:  # noqa: N802 - Qt naming
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        active = self._hover or self.hasFocus()
+        if active:
+            painter.setPen(Qt.PenStyle.NoPen)
+            tint = theme.ERROR if self.kind == self.CLOSE else theme.BLUE
+            painter.setBrush(colour(tint, 0.20))
+            painter.drawRoundedRect(QRectF(self.rect()), theme.RADIUS_SM, theme.RADIUS_SM)
+
+        stroke = colour(theme.TEXT_PRIMARY if active else theme.TEXT_SECONDARY)
+        painter.setPen(QPen(stroke, 1.4, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+        middle_x, middle_y = self.width() / 2, self.height() / 2
+        if self.kind == self.MINIMISE:
+            painter.drawLine(
+                QPoint(int(middle_x - 5), int(middle_y)), QPoint(int(middle_x + 5), int(middle_y))
+            )
+        else:
+            painter.drawLine(
+                QPoint(int(middle_x - 5), int(middle_y - 5)),
+                QPoint(int(middle_x + 5), int(middle_y + 5)),
+            )
+            painter.drawLine(
+                QPoint(int(middle_x + 5), int(middle_y - 5)),
+                QPoint(int(middle_x - 5), int(middle_y + 5)),
+            )
+
+
+class Toggle(QAbstractButton):
+    """The one switch used everywhere. Orange on, quiet navy off."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setCheckable(True)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._height = 22
-        self.setFixedSize(width, self._height)
+        self.setFixedSize(theme.TOGGLE_WIDTH, theme.TOGGLE_HEIGHT)
+        self.setFocusPolicy(Qt.FocusPolicy.TabFocus)
         self._offset = 0.0
         self._animation = QPropertyAnimation(self, b"offset", self)
-        self._animation.setDuration(180)
+        self._animation.setDuration(theme.DURATION_NORMAL)
         self._animation.setEasingCurve(QEasingCurve.Type.OutCubic)
         self.toggled.connect(self._slide)
 
@@ -128,104 +210,120 @@ class Switch(QAbstractButton):
         self.update()
 
     def sizeHint(self) -> QSize:  # noqa: N802 - Qt naming
-        return self.size()
+        return QSize(theme.TOGGLE_WIDTH, theme.TOGGLE_HEIGHT)
 
     def paintEvent(self, _event) -> None:  # noqa: N802 - Qt naming
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setPen(Qt.PenStyle.NoPen)
 
-        track = blend(colour(theme.NAVY_700), colour(theme.ORANGE), self._offset)
+        height = self.height()
+        track = blend(colour(theme.SURFACE_ACTIVE), colour(theme.ACCENT), self._offset)
         painter.setBrush(track)
-        painter.drawRoundedRect(QRectF(0, 0, self.width(), self._height), 11, 11)
+        painter.drawRoundedRect(QRectF(0, 0, self.width(), height), height / 2, height / 2)
 
-        if self._offset < 0.5:
-            painter.setPen(QPen(colour(theme.LINE), 1))
+        if self.hasFocus():
+            painter.setPen(QPen(colour(theme.BLUE), 1.4))
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.drawRoundedRect(
-                QRectF(0.5, 0.5, self.width() - 1, self._height - 1), 11, 11
+                QRectF(0.7, 0.7, self.width() - 1.4, height - 1.4), height / 2, height / 2
             )
             painter.setPen(Qt.PenStyle.NoPen)
 
-        travel = self.width() - self._height
-        knob = QRectF(3 + travel * self._offset, 3, self._height - 6, self._height - 6)
-        painter.setBrush(colour(theme.CREAM if self._offset > 0.5 else theme.MUTED))
+        travel = self.width() - height
+        inset = 3
+        knob = QRectF(
+            inset + travel * self._offset, inset, height - 2 * inset, height - 2 * inset
+        )
+        painter.setBrush(
+            colour(theme.TEXT_PRIMARY if self._offset > 0.5 else theme.TEXT_SECONDARY)
+        )
         painter.drawEllipse(knob)
 
 
-class SwitchRow(QWidget):
-    """A labelled switch with its state spelled out -- no card around it."""
+class SettingRow(QWidget):
+    """Title, one line of explanation, and a control on the right.
+
+    The same row is used on the dashboard and in settings, which is what keeps
+    the two feeling like one application.
+    """
 
     toggled = Signal(bool)
 
     def __init__(
         self,
-        text: str,
+        title: str,
+        description: str = "",
         checked: bool = False,
-        note: str = "",
-        compact: bool = False,
+        control: QWidget | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(10)
+        layout.setContentsMargins(0, 5, 0, 5)
+        layout.setSpacing(theme.SPACE_4)
 
-        titles = QVBoxLayout()
-        titles.setSpacing(1)
-        self.title = label(text, "caption" if compact else "body")
-        titles.addWidget(self.title)
-        self.note = None
-        if note:
-            self.note = label(note, "small")
-            self.note.setWordWrap(True)
-            titles.addWidget(self.note)
-        layout.addLayout(titles, 1)
+        column = QVBoxLayout()
+        column.setSpacing(1)
+        self.title = text(title, "body-strong")
+        column.addWidget(self.title)
+        self.description = None
+        if description:
+            self.description = text(description, "small")
+            self.description.setWordWrap(True)
+            column.addWidget(self.description)
+        layout.addLayout(column, 1)
 
-        self.state = label("OFF", "small")
-        self.state.setMinimumWidth(26)
-        self.state.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.state = text("", "small")
+        self.state.setMinimumWidth(24)
+        self.state.setAlignment(
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        )
         layout.addWidget(self.state)
 
-        self.switch = Switch(width=38 if compact else 42)
-        self.switch.setChecked(checked)
-        self.switch.toggled.connect(self._on_toggled)
-        layout.addWidget(self.switch)
-
-        self._render(checked)
+        if control is None:
+            self.toggle: Toggle | None = Toggle()
+            self.toggle.setAccessibleName(title)
+            self.toggle.setChecked(checked)
+            self.toggle.toggled.connect(self._on_toggled)
+            layout.addWidget(self.toggle)
+            self._render(checked)
+        else:
+            self.toggle = None
+            self.state.hide()
+            layout.addWidget(control)
 
     def _on_toggled(self, value: bool) -> None:
         self._render(value)
         self.toggled.emit(value)
 
     def _render(self, value: bool) -> None:
+        # State is spelled out as well as coloured, so it never depends on hue.
         self.state.setText("ON" if value else "OFF")
         self.state.setStyleSheet(
-            f"color: {theme.ORANGE if value else theme.DIM}; font-size: 11px; font-weight: 700;"
+            theme.font_css("caption", theme.ACCENT if value else theme.TEXT_MUTED)
         )
 
     def setChecked(self, value: bool) -> None:  # noqa: N802 - Qt naming
-        self.switch.blockSignals(True)
-        self.switch.setChecked(value)
-        self.switch.blockSignals(False)
+        if self.toggle is None:
+            return
+        self.toggle.blockSignals(True)
+        self.toggle.setChecked(value)
+        self.toggle.blockSignals(False)
         self._render(value)
 
     def isChecked(self) -> bool:  # noqa: N802 - Qt naming
-        return self.switch.isChecked()
-
-    def setEnabled(self, value: bool) -> None:  # noqa: N802 - Qt naming
-        super().setEnabled(value)
-        self.switch.setEnabled(value)
+        return bool(self.toggle and self.toggle.isChecked())
 
 
 class Slider(QWidget):
-    """A flat slider: orange fill, cream knob, snapping to fixed steps."""
+    """A stepped slider drawn to match the rest of the app."""
 
     valueChanged = Signal(float)
 
-    HEIGHT = 26
-    KNOB = 8
-    PAD = 9
+    HEIGHT = 22
+    KNOB = 7
+    PAD = 8
 
     def __init__(
         self,
@@ -237,6 +335,7 @@ class Slider(QWidget):
         super().__init__(parent)
         self.setFixedHeight(self.HEIGHT)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setFocusPolicy(Qt.FocusPolicy.TabFocus)
         self._value = value
         self._maximum = maximum
         self._step = step
@@ -261,16 +360,28 @@ class Slider(QWidget):
         self.update()
 
     def mousePressEvent(self, event) -> None:  # noqa: N802 - Qt naming
+        self.setFocus(Qt.FocusReason.MouseFocusReason)
         self._seek(event.position().x())
 
     def mouseMoveEvent(self, event) -> None:  # noqa: N802 - Qt naming
         if event.buttons() & Qt.MouseButton.LeftButton:
             self._seek(event.position().x())
 
+    def keyPressEvent(self, event) -> None:  # noqa: N802 - Qt naming
+        if event.key() in (Qt.Key.Key_Left, Qt.Key.Key_Down):
+            self._commit(self._value - self._step)
+        elif event.key() in (Qt.Key.Key_Right, Qt.Key.Key_Up):
+            self._commit(self._value + self._step)
+        else:
+            super().keyPressEvent(event)
+
     def _seek(self, x: float) -> None:
         span = max(1, self.width() - 2 * self.PAD)
         ratio = min(1.0, max(0.0, (x - self.PAD) / span))
-        value = round(ratio * self._maximum / self._step) * self._step
+        self._commit(round(ratio * self._maximum / self._step) * self._step)
+
+    def _commit(self, value: float) -> None:
+        value = max(0.0, min(self._maximum, round(value / self._step) * self._step))
         if value != self._value:
             self._value = value
             self.update()
@@ -284,48 +395,40 @@ class Slider(QWidget):
         middle = self.HEIGHT / 2
         left, right = self.PAD, max(self.PAD + 1, self.width() - self.PAD)
 
-        painter.setBrush(colour(theme.NAVY_700))
-        painter.drawRoundedRect(QRectF(left, middle - 2.5, right - left, 5), 3, 3)
+        painter.setBrush(colour(theme.SURFACE_ACTIVE))
+        painter.drawRoundedRect(QRectF(left, middle - 2, right - left, 4), 2, 2)
 
         position = left + (right - left) * (self._value / self._maximum)
         if position > left:
-            gradient = QLinearGradient(left, 0, position, 0)
-            gradient.setColorAt(0.0, colour(theme.ORANGE_DEEP))
-            gradient.setColorAt(1.0, colour(theme.ORANGE))
-            painter.setBrush(gradient)
-            painter.drawRoundedRect(QRectF(left, middle - 2.5, position - left, 5), 3, 3)
+            painter.setBrush(colour(theme.ACCENT))
+            painter.drawRoundedRect(QRectF(left, middle - 2, position - left, 4), 2, 2)
 
-        if self._hover:
-            painter.setBrush(colour(theme.ORANGE, 0.22))
-            painter.drawEllipse(QRectF(position - 13, middle - 13, 26, 26))
+        if self._hover or self.hasFocus():
+            painter.setBrush(colour(theme.ACCENT, 0.20))
+            painter.drawEllipse(QRectF(position - 12, middle - 12, 24, 24))
 
-        painter.setBrush(colour(theme.CREAM))
-        painter.drawEllipse(
-            QRectF(position - self.KNOB, middle - self.KNOB, self.KNOB * 2, self.KNOB * 2)
-        )
-        painter.setPen(QPen(colour(theme.ORANGE), 2))
-        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.setBrush(colour(theme.TEXT_PRIMARY))
         painter.drawEllipse(
             QRectF(position - self.KNOB, middle - self.KNOB, self.KNOB * 2, self.KNOB * 2)
         )
 
 
-class StatePill(QWidget):
-    """The live state, as a tinted chip with a breathing dot."""
+class StatusPill(QWidget):
+    """The live state: a dot that breathes, and words that say the same thing."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setFixedHeight(28)
-        self._text = "Waiting for League"
-        self._colour = colour(theme.DIM)
+        self.setFixedHeight(26)
+        self._text = "Waiting"
+        self._colour = colour(theme.TEXT_MUTED)
+        self._live = False
         self._pulse = 0.0
         self._animation = QPropertyAnimation(self, b"pulse", self)
-        self._animation.setDuration(1800)
+        self._animation.setDuration(1900)
         self._animation.setStartValue(0.0)
         self._animation.setEndValue(1.0)
         self._animation.setEasingCurve(QEasingCurve.Type.InOutSine)
         self._animation.setLoopCount(-1)
-        self._animation.start()
 
     def _get_pulse(self) -> float:
         return self._pulse
@@ -336,236 +439,278 @@ class StatePill(QWidget):
 
     pulse = Property(float, _get_pulse, _set_pulse)
 
-    def set_state(self, text: str, tint: str) -> None:
-        self._text = text
-        self._colour = colour(tint)
+    def set_status(self, label: str, tone: str, live: bool = True) -> None:
+        self._text = label
+        self._colour = colour(tone)
+        self._live = live
+        running = self._animation.state() == QPropertyAnimation.State.Running
+        if live and not running:
+            self._animation.start()
+        elif not live and running:
+            self._animation.stop()
+            self._pulse = 0.0
         self.updateGeometry()
         self.update()
 
+    def set_animated(self, playing: bool) -> None:
+        if playing and self._live:
+            self._animation.start()
+        else:
+            self._animation.stop()
+
     def sizeHint(self) -> QSize:  # noqa: N802 - Qt naming
-        metrics = self.fontMetrics()
-        return QSize(metrics.horizontalAdvance(self._text) + 46, 28)
+        return QSize(self.fontMetrics().horizontalAdvance(self._text) + 40, 26)
 
     def paintEvent(self, _event) -> None:  # noqa: N802 - Qt naming
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setPen(Qt.PenStyle.NoPen)
 
-        painter.setBrush(QColor(self._colour.red(), self._colour.green(), self._colour.blue(), 34))
-        painter.drawRoundedRect(QRectF(self.rect()), 14, 14)
+        painter.setBrush(colour(self._colour.name(), 0.13))
+        painter.drawRoundedRect(QRectF(self.rect()), 13, 13)
 
         swell = 1.0 - abs(self._pulse * 2 - 1)
-        halo = QColor(self._colour)
-        halo.setAlphaF(0.20 + 0.30 * swell)
-        painter.setBrush(halo)
-        painter.drawEllipse(QRectF(11, self.height() / 2 - 6, 12, 12))
+        if self._live:
+            halo = QColor(self._colour)
+            halo.setAlphaF(0.18 + 0.28 * swell)
+            painter.setBrush(halo)
+            painter.drawEllipse(QRectF(9, self.height() / 2 - 5.5, 11, 11))
         painter.setBrush(self._colour)
-        painter.drawEllipse(QRectF(14, self.height() / 2 - 3, 6, 6))
+        painter.drawEllipse(QRectF(11.5, self.height() / 2 - 3, 6, 6))
 
-        painter.setPen(colour(theme.TEXT))
-        font = painter.font()
-        font.setPointSize(9)
+        painter.setPen(colour(theme.TEXT_PRIMARY))
+        font = QFont(theme.FONT, 9)
         font.setBold(True)
         painter.setFont(font)
         painter.drawText(
-            QRect(28, 0, self.width() - 38, self.height()),
+            QRect(26, 0, self.width() - 34, self.height()),
             Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
             self._text,
         )
 
 
-class TimerBar(QWidget):
-    """The draft countdown."""
+class ProgressBar(QWidget):
+    """A thin determinate bar, used for the draft timer and the accept delay."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setFixedHeight(5)
+        self.setFixedHeight(4)
         self._fraction = 0.0
+        self._tone = theme.BLUE
 
-    def set_fraction(self, value: float) -> None:
-        value = max(0.0, min(1.0, value))
-        if abs(value - self._fraction) > 0.004:
-            self._fraction = value
+    def set_progress(self, fraction: float, tone: str | None = None) -> None:
+        fraction = max(0.0, min(1.0, fraction))
+        changed = abs(fraction - self._fraction) > 0.004 or (tone and tone != self._tone)
+        self._fraction = fraction
+        if tone:
+            self._tone = tone
+        if changed:
             self.update()
 
     def paintEvent(self, _event) -> None:  # noqa: N802 - Qt naming
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(colour(theme.NAVY_700))
-        painter.drawRoundedRect(QRectF(0, 0, self.width(), self.height()), 2.5, 2.5)
-
-        if self._fraction <= 0:
-            return
-        end = colour(theme.SKY_BRIGHT if self._fraction > 0.35 else theme.ORANGE)
-        gradient = QLinearGradient(0, 0, self.width() * self._fraction, 0)
-        gradient.setColorAt(0.0, colour(theme.CYAN if self._fraction > 0.35 else theme.ORANGE_DEEP))
-        gradient.setColorAt(1.0, end)
-        painter.setBrush(gradient)
-        painter.drawRoundedRect(
-            QRectF(0, 0, self.width() * self._fraction, self.height()), 2.5, 2.5
-        )
+        painter.setBrush(colour(theme.SURFACE_ACTIVE))
+        painter.drawRoundedRect(QRectF(0, 0, self.width(), self.height()), 2, 2)
+        if self._fraction > 0:
+            painter.setBrush(colour(self._tone))
+            painter.drawRoundedRect(
+                QRectF(0, 0, self.width() * self._fraction, self.height()), 2, 2
+            )
 
 
 class Avatar(QWidget):
-    """Neeko herself: a round portrait whose ring answers to her mood."""
+    """The header portrait. Animates when handed a GIF."""
 
     clicked = Signal()
 
-    def __init__(self, path: Path | None, size: int = 64, parent: QWidget | None = None) -> None:
+    def __init__(self, path: Path | None, size: int = 44, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setFixedSize(size + 10, size + 10)
+        self.setFixedSize(size + 6, size + 6)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self._size = size
         self._movie: QMovie | None = None
         self._pixmap: QPixmap | None = None
-        self._ring = colour(theme.SKY)
-        self._energy = 0.0
-        self._pulse = 0.0
+        self._ring = colour(theme.BLUE)
 
-        if path and path.exists():
-            if path.suffix.lower() == ".gif":
+        if path and Path(path).exists():
+            if Path(path).suffix.lower() == ".gif":
                 self._movie = QMovie(str(path))
                 self._movie.frameChanged.connect(self.update)
                 self._movie.start()
             else:
                 self._pixmap = QPixmap(str(path))
 
-        self._animation = QPropertyAnimation(self, b"pulse", self)
-        self._animation.setDuration(2200)
-        self._animation.setStartValue(0.0)
-        self._animation.setEndValue(1.0)
-        self._animation.setEasingCurve(QEasingCurve.Type.InOutSine)
-        self._animation.setLoopCount(-1)
-        self._animation.start()
-
-    def _get_pulse(self) -> float:
-        return self._pulse
-
-    def _set_pulse(self, value: float) -> None:
-        self._pulse = value
-        self.update()
-
-    pulse = Property(float, _get_pulse, _set_pulse)
-
-    def set_mood(self, ring: str, energy: float) -> None:
-        self._ring = colour(ring)
-        self._energy = max(0.0, min(1.0, energy))
+    def set_tone(self, tone: str) -> None:
+        self._ring = colour(tone)
         self.update()
 
     def set_animated(self, playing: bool) -> None:
-        """Pausing the GIF while hidden keeps the app cheap in the tray."""
-        if self._movie is None:
-            return
-        self._movie.setPaused(not playing)
+        """Paused while hidden, so the tray costs nothing to leave running."""
+        if self._movie is not None:
+            self._movie.setPaused(not playing)
 
     def mousePressEvent(self, _event) -> None:  # noqa: N802 - Qt naming
         self.clicked.emit()
-
-    def _frame(self) -> QPixmap | None:
-        if self._movie is not None:
-            frame = self._movie.currentPixmap()
-            return frame if not frame.isNull() else None
-        return self._pixmap
 
     def paintEvent(self, _event) -> None:  # noqa: N802 - Qt naming
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
 
-        centre = QRectF(5, 5, self._size, self._size)
-        swell = 1.0 - abs(self._pulse * 2 - 1)
-
-        if self._energy > 0.05:
-            glow = QColor(self._ring)
-            glow.setAlphaF(0.10 + 0.28 * self._energy * swell)
-            painter.setPen(Qt.PenStyle.NoPen)
-            painter.setBrush(glow)
-            spread = 2 + 4 * self._energy * swell
-            painter.drawEllipse(centre.adjusted(-spread, -spread, spread, spread))
-
+        body = QRectF(3, 3, self._size, self._size)
         clip = QPainterPath()
-        clip.addEllipse(centre)
+        clip.addEllipse(body)
         painter.save()
         painter.setClipPath(clip)
-        painter.fillRect(self.rect(), colour(theme.NAVY_700))
-        frame = self._frame()
-        if frame is not None:
+        painter.fillRect(self.rect(), colour(theme.SURFACE_ACTIVE))
+
+        frame = self._movie.currentPixmap() if self._movie is not None else self._pixmap
+        if frame is not None and not frame.isNull():
             scaled = frame.scaled(
-                centre.size().toSize(),
+                body.size().toSize(),
                 Qt.AspectRatioMode.KeepAspectRatioByExpanding,
                 Qt.TransformationMode.SmoothTransformation,
             )
             painter.drawPixmap(
-                int(centre.x() - (scaled.width() - centre.width()) / 2),
-                int(centre.y() - (scaled.height() - centre.height()) / 2),
+                int(body.x() - (scaled.width() - body.width()) / 2),
+                int(body.y() - (scaled.height() - body.height()) / 2),
                 scaled,
             )
         painter.restore()
 
         painter.setBrush(Qt.BrushStyle.NoBrush)
-        painter.setPen(QPen(self._ring, 2.4))
-        painter.drawEllipse(centre)
+        painter.setPen(QPen(self._ring, 2.0))
+        painter.drawEllipse(body)
 
 
-class SpeechLine(QWidget):
-    """What Neeko is saying, cross-faded when it changes."""
+class NeekoArt(QWidget):
+    """The state illustration, cross-faded when the situation changes."""
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, height: int = 150, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        self.text = label("", "sky")
-        self.text.setWordWrap(True)
-        layout.addWidget(self.text)
-
-        self._effect = QGraphicsOpacityEffect(self.text)
+        self.setFixedHeight(height)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self._pixmap: QPixmap | None = None
+        self._role = ""
+        self._effect = QGraphicsOpacityEffect(self)
         self._effect.setOpacity(1.0)
-        self.text.setGraphicsEffect(self._effect)
+        self.setGraphicsEffect(self._effect)
         self._fade = QPropertyAnimation(self._effect, b"opacity", self)
-        self._fade.setDuration(220)
-        self._current = ""
+        self._fade.setDuration(theme.DURATION_SLOW)
 
-    def say(self, line: str, tint: str, animate: bool = True) -> None:
-        if line == self._current:
+    def set_art(self, role: str, pixmap: QPixmap | None, animate: bool = True) -> None:
+        if role == self._role:
             return
-        self._current = line
-        self.text.setText(line)
-        self.text.setStyleSheet(f"color: {tint}; font-size: 12px; font-weight: 600;")
-        if not animate:
+        self._role = role
+        self._pixmap = pixmap
+        self.update()
+        if animate:
+            self._fade.stop()
+            self._fade.setStartValue(0.0)
+            self._fade.setEndValue(1.0)
+            self._fade.start()
+
+    def paintEvent(self, _event) -> None:  # noqa: N802 - Qt naming
+        if self._pixmap is None:
             return
-        self._fade.stop()
-        self._fade.setStartValue(0.0)
-        self._fade.setEndValue(1.0)
-        self._fade.start()
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+        scaled = self._pixmap.scaledToHeight(
+            self.height(), Qt.TransformationMode.SmoothTransformation
+        )
+        painter.drawPixmap(int((self.width() - scaled.width()) / 2), 0, scaled)
 
 
-def magnifier_icon(tint: str = theme.MUTED, size: int = 16) -> QIcon:
-    """A small search glyph, drawn rather than shipped as a file."""
-    pixmap = QPixmap(size, size)
-    pixmap.fill(Qt.GlobalColor.transparent)
-    painter = QPainter(pixmap)
-    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-    painter.setPen(QPen(colour(tint), 1.7))
-    painter.setBrush(Qt.BrushStyle.NoBrush)
-    painter.drawEllipse(QRectF(2.5, 2.5, 8.5, 8.5))
-    painter.drawLine(QPoint(11, 11), QPoint(14, 14))
-    painter.end()
-    return QIcon(pixmap)
+# ---------------------------------------------------------- champion bits ---
 
 
-class WindowButton(QAbstractButton):
-    """Minimise and close, drawn rather than typed as glyphs."""
+class ChampionIcon(QWidget):
+    """A rounded champion portrait, or a placeholder initial."""
 
-    MINIMISE = "minimise"
-    CLOSE = "close"
-
-    def __init__(self, kind: str, parent: QWidget | None = None) -> None:
+    def __init__(self, size: int = theme.ICON_MD, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.kind = kind
+        self.setFixedSize(size, size)
+        self._pixmap: QPixmap | None = None
+        self._letter = ""
+        self._tone = theme.BORDER_STRONG
+
+    def set_champion(self, name: str, tone: str = theme.BORDER_STRONG) -> None:
+        self._letter = (name or "")[:1].upper()
+        self._tone = tone
+        if not name:
+            self._pixmap = None
+        self.update()
+
+    def set_pixmap(self, pixmap: QPixmap | None) -> None:
+        self._pixmap = pixmap
+        self.update()
+
+    def paintEvent(self, _event) -> None:  # noqa: N802 - Qt naming
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+
+        body = QRectF(0.5, 0.5, self.width() - 1, self.height() - 1)
+        radius = self.width() * 0.28
+        clip = QPainterPath()
+        clip.addRoundedRect(body, radius, radius)
+        painter.setClipPath(clip)
+        painter.fillRect(self.rect(), colour(theme.SURFACE_ACTIVE))
+
+        if self._pixmap is not None and not self._pixmap.isNull():
+            scaled = self._pixmap.scaled(
+                self.size(),
+                Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+            painter.drawPixmap(0, 0, scaled)
+        elif self._letter:
+            painter.setPen(colour(theme.TEXT_MUTED))
+            font = QFont(theme.FONT, max(9, int(self.height() * 0.34)))
+            font.setBold(True)
+            painter.setFont(font)
+            painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, self._letter)
+
+        painter.setClipping(False)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.setPen(QPen(colour(self._tone, 0.8), 1.2))
+        painter.drawRoundedRect(body, radius, radius)
+
+
+class ChampionTile(QAbstractButton):
+    """One champion, as a row you can click to change it."""
+
+    def __init__(
+        self, role_label: str, primary: bool = True, parent: QWidget | None = None
+    ) -> None:
+        super().__init__(parent)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setFixedSize(30, 26)
+        self.setFixedHeight(54)
+        self.setFocusPolicy(Qt.FocusPolicy.TabFocus)
+        self._primary = primary
         self._hover = False
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(theme.SPACE_3, theme.SPACE_2, theme.SPACE_3, theme.SPACE_2)
+        layout.setSpacing(theme.SPACE_3)
+
+        self.icon = ChampionIcon(theme.ICON_MD if primary else theme.ICON_SM)
+        layout.addWidget(self.icon)
+
+        names = QVBoxLayout()
+        names.setSpacing(0)
+        self.name = text("Choose a champion", "body-strong" if primary else "body")
+        self.title = text(role_label, "small")
+        names.addWidget(self.name)
+        names.addWidget(self.title)
+        layout.addLayout(names, 1)
+
+        self.badge = text(role_label.upper(), "caption")
+        layout.addWidget(self.badge)
+
+        self.set_champion(0, "", "")
 
     def enterEvent(self, _event) -> None:  # noqa: N802 - Qt naming
         self._hover = True
@@ -575,121 +720,92 @@ class WindowButton(QAbstractButton):
         self._hover = False
         self.update()
 
+    def set_champion(self, champion_id: int, name: str, subtitle: str) -> None:
+        tone = theme.ACCENT if self._primary else theme.BLUE
+        chosen = bool(champion_id)
+        self.icon.set_champion(name, tone if chosen else theme.BORDER_STRONG)
+        self.name.setText(name or "Choose a champion")
+        self.name.setStyleSheet(
+            theme.font_css(
+                "body-strong" if self._primary else "body",
+                theme.TEXT_PRIMARY if chosen else theme.TEXT_MUTED,
+            )
+        )
+        self.title.setText(subtitle or ("your first pick" if self._primary else "if the first is gone"))
+        self.badge.setStyleSheet(
+            theme.font_css("caption", tone if chosen else theme.TEXT_MUTED)
+        )
+        self.setAccessibleName(f"{self.badge.text()}: {name or 'not chosen'}")
+
+    def set_pixmap(self, pixmap: QPixmap | None) -> None:
+        self.icon.set_pixmap(pixmap)
+
     def paintEvent(self, _event) -> None:  # noqa: N802 - Qt naming
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(Qt.PenStyle.NoPen)
 
-        if self._hover:
-            painter.setPen(Qt.PenStyle.NoPen)
-            tint = theme.DANGER if self.kind == self.CLOSE else theme.SKY
-            painter.setBrush(colour(tint, 0.22))
-            painter.drawRoundedRect(QRectF(self.rect()), 7, 7)
-
-        stroke = colour(theme.CREAM if self._hover else theme.MUTED)
-        painter.setPen(QPen(stroke, 1.5, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
-        middle_x, middle_y = self.width() / 2, self.height() / 2
-        if self.kind == self.MINIMISE:
-            painter.drawLine(QPoint(int(middle_x - 5), int(middle_y)),
-                             QPoint(int(middle_x + 5), int(middle_y)))
-        else:
-            painter.drawLine(QPoint(int(middle_x - 5), int(middle_y - 5)),
-                             QPoint(int(middle_x + 5), int(middle_y + 5)))
-            painter.drawLine(QPoint(int(middle_x + 5), int(middle_y - 5)),
-                             QPoint(int(middle_x - 5), int(middle_y + 5)))
+        body = QRectF(0.5, 0.5, self.width() - 1, self.height() - 1)
+        if self._hover or self.hasFocus():
+            painter.setBrush(colour(theme.SURFACE_HOVER))
+            painter.drawRoundedRect(body, theme.RADIUS_MD, theme.RADIUS_MD)
+        if self.hasFocus():
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.setPen(QPen(colour(theme.BLUE), 1.2))
+            painter.drawRoundedRect(body, theme.RADIUS_MD, theme.RADIUS_MD)
 
 
-class ChampionShowcase(QWidget):
-    """The centrepiece: splash art, the champion, and the two draft switches."""
+class ChampionHero(QWidget):
+    """The draft centrepiece: splash art, masked, with the champion on top."""
 
-    declare_toggled = Signal(bool)
-    lock_toggled = Signal(bool)
-
-    HEIGHT = 178
-
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, height: int = 152, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setFixedHeight(self.HEIGHT)
+        self.setFixedHeight(height)
         self._splash: QPixmap | None = None
         self._icon: QPixmap | None = None
-        self._has_champion = False
-        self._highlight = False
-        self._flower = self._load(theme_flower())
+        self._name = ""
+        self._title = ""
+        self._tone = theme.ACCENT
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 14, 16, 14)
-        layout.setSpacing(0)
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(theme.SPACE_4, theme.SPACE_4, theme.SPACE_4, theme.SPACE_4)
+        layout.setSpacing(theme.SPACE_3)
 
-        layout.addWidget(caption("Your champion"))
-        layout.addSpacing(8)
+        self.icon = ChampionIcon(theme.ICON_LG)
+        layout.addWidget(self.icon, 0, Qt.AlignmentFlag.AlignVCenter)
 
-        identity = QHBoxLayout()
-        identity.setSpacing(12)
-        self.icon_slot = QWidget()
-        self.icon_slot.setFixedSize(54, 54)
-        identity.addWidget(self.icon_slot)
+        column = QVBoxLayout()
+        column.setSpacing(2)
+        column.addStretch(1)
+        self.badge = text("YOUR CHAMPION", "caption")
+        self.name_label = text("", "display")
+        self.title_label = text("", "secondary")
+        column.addWidget(self.badge)
+        column.addWidget(self.name_label)
+        column.addWidget(self.title_label)
+        column.addStretch(1)
+        layout.addLayout(column, 1)
 
-        names = QVBoxLayout()
-        names.setSpacing(0)
-        names.addStretch(1)
-        self.name = label("Nobody yet", "display")
-        self.title = label("pick someone below", "muted")
-        names.addWidget(self.name)
-        names.addWidget(self.title)
-        names.addStretch(1)
-        identity.addLayout(names, 1)
-        layout.addLayout(identity)
-
-        layout.addStretch(1)
-
-        switches = QHBoxLayout()
-        switches.setSpacing(18)
-        self.declare_row = SwitchRow("Auto declare", True, compact=True)
-        self.declare_row.toggled.connect(self.declare_toggled.emit)
-        self.lock_row = SwitchRow("Auto lock in", False, compact=True)
-        self.lock_row.toggled.connect(self.lock_toggled.emit)
-        switches.addWidget(self.declare_row, 1)
-        switches.addWidget(self.lock_row, 1)
-        layout.addLayout(switches)
-
-    @staticmethod
-    def _load(path: Path | None) -> QPixmap | None:
-        if path is None or not Path(path).exists():
-            return None
-        pixmap = QPixmap(str(path))
-        return None if pixmap.isNull() else pixmap
-
-    # -- content ----------------------------------------------------------
-
-    def set_champion(self, name: str, title: str) -> None:
-        self._has_champion = bool(name)
-        self.name.setText(name or "Nobody yet")
-        self.name.setStyleSheet(
-            f"color: {theme.CREAM if name else theme.MUTED}; font-size: 19px; font-weight: 700;"
+    def set_champion(self, name: str, title: str, tone: str = theme.ACCENT) -> None:
+        self._name, self._title, self._tone = name, title, tone
+        self.name_label.setText(name or "No champion chosen")
+        self.name_label.setStyleSheet(
+            theme.font_css("display", theme.TEXT_PRIMARY if name else theme.TEXT_MUTED)
         )
-        self.title.setText(title or ("pick someone below" if not name else ""))
+        self.title_label.setText(title)
+        self.badge.setStyleSheet(theme.font_css("caption", tone))
+        self.icon.set_champion(name, tone)
         if not name:
             self._splash = None
-            self._icon = None
         self.update()
 
     def set_icon(self, pixmap: QPixmap | None) -> None:
         self._icon = pixmap
-        self.update()
+        self.icon.set_pixmap(pixmap)
 
     def set_splash(self, pixmap: QPixmap | None) -> None:
         self._splash = pixmap
         self.update()
-
-    def set_highlight(self, on: bool) -> None:
-        if on != self._highlight:
-            self._highlight = on
-            self.update()
-
-    def set_states(self, declare: bool, lock: bool) -> None:
-        self.declare_row.setChecked(declare)
-        self.lock_row.setChecked(lock)
-
-    # -- painting ---------------------------------------------------------
 
     def paintEvent(self, _event) -> None:  # noqa: N802 - Qt naming
         painter = QPainter(self)
@@ -698,11 +814,10 @@ class ChampionShowcase(QWidget):
 
         body = QRectF(0.5, 0.5, self.width() - 1, self.height() - 1)
         clip = QPainterPath()
-        clip.addRoundedRect(body, theme.PANEL_RADIUS, theme.PANEL_RADIUS)
-
+        clip.addRoundedRect(body, theme.RADIUS_LG, theme.RADIUS_LG)
         painter.save()
         painter.setClipPath(clip)
-        painter.fillRect(self.rect(), colour(theme.NAVY_800))
+        painter.fillRect(self.rect(), colour(theme.SURFACE))
 
         if self._splash is not None:
             scaled = self._splash.scaled(
@@ -710,202 +825,270 @@ class ChampionShowcase(QWidget):
                 Qt.AspectRatioMode.KeepAspectRatioByExpanding,
                 Qt.TransformationMode.SmoothTransformation,
             )
-            # Splash art is centred on the face; bias upward so it is in frame.
+            # Splashes are composed around the face; bias upward to keep it in frame.
             painter.drawPixmap(
-                int((self.width() - scaled.width()) / 2),
-                int((self.height() - scaled.height()) * 0.32),
+                int((self.width() - scaled.width()) * 0.5),
+                int((self.height() - scaled.height()) * 0.3),
                 scaled,
             )
+            # One horizontal mask keeps the text side readable without a slab.
             wash = QLinearGradient(0, 0, self.width(), 0)
-            wash.setColorAt(0.0, colour(theme.NAVY_800, 0.97))
-            wash.setColorAt(0.55, colour(theme.NAVY_800, 0.72))
-            wash.setColorAt(1.0, colour(theme.NAVY_800, 0.30))
+            wash.setColorAt(0.0, colour(theme.SURFACE, 0.98))
+            wash.setColorAt(0.52, colour(theme.SURFACE, 0.80))
+            wash.setColorAt(1.0, colour(theme.SURFACE, 0.22))
             painter.fillRect(self.rect(), wash)
-
-            base = QLinearGradient(0, self.height() * 0.45, 0, self.height())
-            base.setColorAt(0.0, colour(theme.NAVY_800, 0.0))
-            base.setColorAt(1.0, colour(theme.NAVY_800, 0.94))
-            painter.fillRect(self.rect(), base)
-        elif self._flower is not None:
-            painter.setOpacity(0.07)
-            side = int(self.height() * 1.15)
-            painter.drawPixmap(
-                self.width() - side + 30,
-                -20,
-                self._flower.scaled(
-                    side, side,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation,
-                ),
-            )
-            painter.setOpacity(1.0)
-        painter.restore()
-
-        # The icon sits in the slot the layout reserved for it.
-        slot = self.icon_slot.geometry()
-        target = QRectF(slot)
-        icon_clip = QPainterPath()
-        icon_clip.addRoundedRect(target, 14, 14)
-        painter.save()
-        painter.setClipPath(icon_clip)
-        painter.fillRect(target, colour(theme.NAVY_700))
-        if self._icon is not None:
-            scaled = self._icon.scaled(
-                target.size().toSize(),
-                Qt.AspectRatioMode.KeepAspectRatioByExpanding,
-                Qt.TransformationMode.SmoothTransformation,
-            )
-            painter.drawPixmap(int(target.x()), int(target.y()), scaled)
-        elif self._flower is not None:
-            painter.setOpacity(0.5)
-            side = int(target.width() * 0.6)
-            painter.drawPixmap(
-                int(target.x() + (target.width() - side) / 2),
-                int(target.y() + (target.height() - side) / 2),
-                self._flower.scaled(
-                    side, side,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation,
-                ),
-            )
-            painter.setOpacity(1.0)
         painter.restore()
 
         painter.setBrush(Qt.BrushStyle.NoBrush)
-        painter.setPen(QPen(colour(theme.ORANGE, 0.85 if self._has_champion else 0.35), 1.6))
-        painter.drawRoundedRect(target, 14, 14)
-
-        if self._highlight:
-            edge = colour(theme.ORANGE)
-            width = 1.8
-        elif self._has_champion:
-            edge = colour(theme.ORANGE, 0.40)
-            width = 1.2
-        else:
-            edge = colour(theme.LINE)
-            width = 1.0
-        painter.setPen(QPen(edge, width))
-        painter.drawRoundedRect(body, theme.PANEL_RADIUS, theme.PANEL_RADIUS)
+        painter.setPen(QPen(colour(self._tone if self._name else theme.BORDER, 0.55), 1.2))
+        painter.drawRoundedRect(body, theme.RADIUS_LG, theme.RADIUS_LG)
 
 
-class MiniChampion(QWidget):
-    """A small champion chip, used for the backup pick."""
+class ChampionResult(QWidget):
+    """One row inside the search overlay."""
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, champion, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setFixedSize(30, 30)
-        self._icon: QPixmap | None = None
-        self._letter = ""
-        self._tint = theme.SKY
+        self.champion = champion
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(theme.SPACE_2, theme.SPACE_1, theme.SPACE_2, theme.SPACE_1)
+        layout.setSpacing(theme.SPACE_3)
 
-    def set_champion(self, name: str, tint: str = theme.SKY) -> None:
-        self._letter = (name or "")[:1].upper()
-        self._tint = tint
-        if not name:
-            self._icon = None
-        self.update()
+        self.icon = ChampionIcon(theme.ICON_SM)
+        self.icon.set_champion(champion.name)
+        layout.addWidget(self.icon)
 
-    def set_icon(self, pixmap: QPixmap | None) -> None:
-        self._icon = pixmap
-        self.update()
+        column = QVBoxLayout()
+        column.setSpacing(0)
+        column.addWidget(text(champion.name, "body-strong"))
+        if champion.title:
+            column.addWidget(text(champion.title, "small"))
+        layout.addLayout(column, 1)
 
-    def paintEvent(self, _event) -> None:  # noqa: N802 - Qt naming
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-
-        body = QRectF(0.5, 0.5, self.width() - 1, self.height() - 1)
-        clip = QPainterPath()
-        clip.addRoundedRect(body, 9, 9)
-        painter.setClipPath(clip)
-        painter.fillRect(self.rect(), colour(theme.NAVY_700))
-
-        if self._icon is not None:
-            scaled = self._icon.scaled(
-                self.size(),
-                Qt.AspectRatioMode.KeepAspectRatioByExpanding,
-                Qt.TransformationMode.SmoothTransformation,
-            )
-            painter.drawPixmap(0, 0, scaled)
-        elif self._letter:
-            painter.setPen(colour(self._tint))
-            font = QFont(theme.FONT, 11)
-            font.setBold(True)
-            painter.setFont(font)
-            painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, self._letter)
-
-        painter.setClipping(False)
-        painter.setBrush(Qt.BrushStyle.NoBrush)
-        painter.setPen(QPen(colour(self._tint, 0.7), 1.2))
-        painter.drawRoundedRect(body, 9, 9)
+    def set_pixmap(self, pixmap: QPixmap | None) -> None:
+        self.icon.set_pixmap(pixmap)
 
 
-class ChampionSearch(QWidget):
-    """Search field plus a compact result list that only shows while typing."""
+class SearchOverlay(QFrame):
+    """Champion search, floated over the dashboard.
+
+    It is a child of the window rather than a layout item, so opening it never
+    reflows anything underneath -- which is both calmer to look at and free of
+    the repaint problems a changing layout brings.
+    """
 
     chosen = Signal(int, str)
+    dismissed = Signal()
+    art_wanted = Signal(str, int)
 
-    def __init__(self, catalog, placeholder: str, parent: QWidget | None = None) -> None:
+    MAX_RESULTS = 6
+
+    def __init__(self, catalog, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.catalog = catalog
+        self._rows: dict[int, ChampionResult] = {}
+        self.setObjectName("overlay")
+        self.setStyleSheet(
+            f"""
+            QFrame#overlay {{
+                background: {theme.SURFACE};
+                border: 1px solid {theme.BORDER_STRONG};
+                border-radius: {theme.RADIUS_LG}px;
+            }}
+            """
+        )
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(6)
+        layout.setContentsMargins(theme.SPACE_3, theme.SPACE_3, theme.SPACE_3, theme.SPACE_3)
+        layout.setSpacing(theme.SPACE_2)
+
+        header = QHBoxLayout()
+        self.heading = text("Choose your champion", "title")
+        header.addWidget(self.heading, 1)
+        close = WindowButton(WindowButton.CLOSE)
+        close.clicked.connect(self.dismissed.emit)
+        header.addWidget(close)
+        layout.addLayout(header)
 
         self.field = QLineEdit()
-        self.field.setPlaceholderText(placeholder)
-        self.field.addAction(magnifier_icon(), QLineEdit.ActionPosition.LeadingPosition)
-        self.field.setClearButtonEnabled(True)
+        self.field.setPlaceholderText("Search champions")
+        self.field.addAction(_magnifier(), QLineEdit.ActionPosition.LeadingPosition)
         self.field.textChanged.connect(self._on_typed)
         self.field.returnPressed.connect(self._on_return)
         layout.addWidget(self.field)
 
         self.results = QListWidget()
-        self.results.setMaximumHeight(168)
+        self.results.setFixedHeight(6 + self.MAX_RESULTS * 40)
         self.results.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.results.hide()
+        self.results.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.results.itemClicked.connect(self._on_activated)
         self.results.itemActivated.connect(self._on_activated)
         layout.addWidget(self.results)
 
-    def _on_typed(self, text: str) -> None:
-        matches = self.catalog.search(text)
-        self.results.clear()
-        if not matches:
-            self.results.hide()
+        self.hint = text("Type a name, then press Enter.", "small")
+        layout.addWidget(self.hint)
+        self.hide()
+
+    # -- opening and closing ---------------------------------------------
+
+    def open_for(self, heading: str) -> None:
+        self.heading.setText(heading)
+        self.field.clear()
+        self._populate(self.catalog.all[: self.MAX_RESULTS])
+        self.show()
+        self.raise_()
+        self.field.setFocus(Qt.FocusReason.OtherFocusReason)
+
+    def keyPressEvent(self, event) -> None:  # noqa: N802 - Qt naming
+        if event.key() == Qt.Key.Key_Escape:
+            self.dismissed.emit()
             return
-        for champion in matches:
-            item = QListWidgetItem(f"{champion.name}   ·   {champion.title}".rstrip(" ·"))
+        if event.key() in (Qt.Key.Key_Down, Qt.Key.Key_Up) and self.results.count():
+            self.results.setFocus(Qt.FocusReason.TabFocusReason)
+            return
+        super().keyPressEvent(event)
+
+    # -- searching --------------------------------------------------------
+
+    def _on_typed(self, query: str) -> None:
+        matches = (
+            self.catalog.search(query, limit=self.MAX_RESULTS)
+            if query.strip()
+            else self.catalog.all[: self.MAX_RESULTS]
+        )
+        self._populate(matches)
+
+    def _populate(self, champions) -> None:
+        self.results.clear()
+        self._rows.clear()
+        for champion in champions:
+            item = QListWidgetItem()
+            item.setSizeHint(QSize(0, 40))
             item.setData(Qt.ItemDataRole.UserRole, champion.id)
             item.setData(Qt.ItemDataRole.UserRole + 1, champion.name)
+            row = ChampionResult(champion)
             self.results.addItem(item)
-        self.results.setCurrentRow(0)
-        self.results.show()
+            self.results.setItemWidget(item, row)
+            self._rows[champion.id] = row
+            self.art_wanted.emit("icon", champion.id)
+        if champions:
+            self.results.setCurrentRow(0)
+        self.hint.setText(
+            "Type a name, then press Enter." if champions else "No champion by that name."
+        )
+
+    def set_pixmap(self, champion_id: int, pixmap: QPixmap) -> None:
+        row = self._rows.get(champion_id)
+        if row is not None:
+            row.set_pixmap(pixmap)
 
     def _on_return(self) -> None:
-        if self.results.isVisible() and self.results.currentItem():
+        if self.results.currentItem():
             self._on_activated(self.results.currentItem())
 
     def _on_activated(self, item: QListWidgetItem) -> None:
-        champion_id = int(item.data(Qt.ItemDataRole.UserRole))
-        name = str(item.data(Qt.ItemDataRole.UserRole + 1))
-        self.field.clear()
-        self.results.hide()
-        self.chosen.emit(champion_id, name)
-
-    def clear(self) -> None:
-        self.field.clear()
-        self.results.hide()
+        self.chosen.emit(
+            int(item.data(Qt.ItemDataRole.UserRole)),
+            str(item.data(Qt.ItemDataRole.UserRole + 1)),
+        )
 
 
-def theme_flower() -> Path | None:
-    from ui import assets
+def _magnifier(tint: str = theme.TEXT_MUTED, size: int = 16) -> QIcon:
+    pixmap = QPixmap(size, size)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    painter.setPen(QPen(colour(tint), 1.6))
+    painter.drawEllipse(QRectF(2.5, 2.5, 8.5, 8.5))
+    painter.drawLine(QPoint(11, 11), QPoint(14, 14))
+    painter.end()
+    return QIcon(pixmap)
 
-    return assets.FLOWER if assets.FLOWER.exists() else None
+
+class Chip(QWidget):
+    """A compact badge saying whether one automation is armed, done or off."""
+
+    OFF = "off"
+    ARMED = "armed"
+    FAILED = "failed"
+
+    _MARKS = {OFF: "–", ARMED: "•", FAILED: "!"}
+
+    def __init__(self, label: str, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setFixedHeight(24)
+        self._label = label
+        self._state = self.OFF
+        self._done = False
+
+    def set_state(self, state: str, done: bool = False) -> None:
+        if state == self._state and done == self._done:
+            return
+        self._state, self._done = state, done
+        self.updateGeometry()
+        self.update()
+
+    def _tone(self) -> str:
+        if self._state == self.FAILED:
+            return theme.ERROR
+        if self._state == self.OFF:
+            return theme.TEXT_MUTED
+        return theme.SUCCESS if self._done else theme.BLUE
+
+    def _mark(self) -> str:
+        if self._state == self.ARMED and self._done:
+            return "✓"
+        return self._MARKS[self._state]
+
+    def sizeHint(self) -> QSize:  # noqa: N802 - Qt naming
+        return QSize(self.fontMetrics().horizontalAdvance(self._label) + 40, 24)
+
+    def paintEvent(self, _event) -> None:  # noqa: N802 - Qt naming
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(Qt.PenStyle.NoPen)
+
+        tone = self._tone()
+        painter.setBrush(colour(tone, 0.13))
+        painter.drawRoundedRect(QRectF(self.rect()), 12, 12)
+
+        painter.setPen(colour(tone))
+        font = QFont(theme.FONT, 9)
+        font.setBold(True)
+        painter.setFont(font)
+        painter.drawText(
+            self.rect().adjusted(10, 0, -10, 0),
+            Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
+            f"{self._mark()}  {self._label}",
+        )
 
 
-def row(*widgets, spacing: int = 10, stretch_at: int | None = None) -> QHBoxLayout:
+class Toast(QWidget):
+    """A quiet line that reports the last thing the app did."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setFixedHeight(20)
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.label = text("", "small")
+        layout.addWidget(self.label)
+
+        self._effect = QGraphicsOpacityEffect(self.label)
+        self.label.setGraphicsEffect(self._effect)
+        self._fade = QPropertyAnimation(self._effect, b"opacity", self)
+        self._fade.setDuration(theme.DURATION_SLOW)
+
+    def show_message(self, message: str, tone: str) -> None:
+        self.label.setText(message)
+        self.label.setStyleSheet(theme.font_css("small", tone))
+        self._fade.stop()
+        self._fade.setStartValue(0.0)
+        self._fade.setEndValue(1.0)
+        self._fade.start()
+
+
+def row(*widgets, spacing: int = theme.SPACE_3, stretch_at: int | None = None) -> QHBoxLayout:
     layout = QHBoxLayout()
     layout.setContentsMargins(0, 0, 0, 0)
     layout.setSpacing(spacing)

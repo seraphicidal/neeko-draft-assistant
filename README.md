@@ -12,7 +12,8 @@ champion select — then stays out of the way in the tray.
 - **Champion auto-declare** — hovers your pick so the team can see it
 - **Optional auto lock-in** — only when the client says the pick is yours
 - **Automatic champion select chat** — one line per draft, never repeated
-- **Live draft state** — phase, whose turn it is, and the timer
+- **A dashboard that follows the game** — the window shows a different scene
+  when League is closed, idle, searching, popping, drafting or in a match
 - **Neeko reacts** to what is happening, from the queue to the lock-in
 - **Windows tray app** — closing the window keeps her watching
 - **Automatic updates** straight from GitHub Releases
@@ -72,11 +73,15 @@ Drop images into the `neeko` folder next to the installed executable, or into
 | File | Where it shows up |
 | --- | --- |
 | `avatar.gif` / `avatar.png` | the round portrait in the header |
-| `chibi.png` | accent art during champion select |
-| `sticker.png` | shown when a queue is accepted |
-| `full.png` | art behind the header |
+| `mood_idle.png` | waiting for the League client |
+| `mood_happy.png` | connected, lobby and post-game |
+| `mood_alert.png` | match found, and your turn to pick |
+| `mood_calm.png` | locked in, and in game |
+| `portrait.png` | champion select |
 
-Anything missing falls back to what ships with the app.
+Anything missing falls back to what ships with the app. Settings › About lists
+which slots are filled. `python tools/prepare_neeko.py <folder>` cuts the
+background out of your own illustrations and files them under these names.
 
 ## Updating
 
@@ -106,24 +111,37 @@ Python 3.10+ on Windows. PySide6 is the only runtime dependency.
 ```
 league/   the client: lcu_client, gameflow, matchmaking, champion_select, chat,
           champions, champion_art
-core/     settings, state_machine, watcher, updater, logbook, startup, version
-ui/       theme, widgets, main_window, settings_window, tray, neeko, app
+core/     settings, state_machine, watcher, updater, logbook, startup, paths,
+          version
+ui/       theme (design tokens), widgets (components), status (state to words),
+          stage (the scenes), main_window, settings_window, tray, art_loader, app
 tests/    one file per area, plus the fake client in mocks.py
-tools/    build, art generation, champion list refresh, LCU probe, UI preview
+tools/    build, art preparation, champion list refresh, LCU probe, UI preview
 ```
 
-`core/state_machine.py` decides and performs nothing; `core/watcher.py` performs
-and decides nothing. That split is what lets the draft be tested without a draft.
+Three layers, kept apart on purpose:
+
+* **`league/`** talks to the client and makes no decisions
+* **`core/state_machine.py`** makes every decision and performs no I/O
+* **`ui/`** renders state and decides nothing
+
+That split is what lets champion select be tested without a champion select,
+and it is why `ui/status.py` -- which turns a state into words, colour and art
+-- is covered by ordinary unit tests.
 
 Useful scripts:
 
 ```bash
 python -m unittest discover -s tests -t .   # the whole suite
 python tools/probe_lcu.py                   # read-only check of every endpoint
-python tools/preview_draft.py               # the UI against a scripted client
-python tools/make_neeko_art.py              # redraw the generated artwork
+python tools/preview.py draft               # the UI against a scripted client
+python tools/preview.py offline             # ...and every other state
+python tools/prepare_neeko.py               # cut out new Neeko illustrations
 python tools/fetch_champions.py             # refresh the bundled champion list
 ```
+
+`tools/preview.py` takes any of `offline`, `connected`, `queue`, `ready`,
+`draft`, `myturn`, `game`, `pick` and `settings`.
 
 ## Building
 

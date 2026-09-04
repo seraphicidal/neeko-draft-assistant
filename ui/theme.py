@@ -1,241 +1,246 @@
-"""The design system: warm orange, light blue, deep navy.
+"""The design system: tokens first, stylesheet second.
 
-Orange is the signature colour and marks anything the app is doing for you --
-the chosen champion, primary actions, live highlights. Light blue carries state:
-connection, secondary controls, calm information. Neeko's magenta and mint are
-accents only, a few pixels at a time.
+Every colour, size and duration in the app comes from here. Components take
+tokens rather than literals, so the interface stays consistent and a change to
+the palette is a change in one place.
 
-Widgets that need real shape are painted in `widgets.py`; this file is the token
-list plus the stylesheet for the plain Qt controls.
+Orange is the primary accent -- it marks what the app is doing for you and what
+you have chosen. Light blue is the state colour: connection, information, calm
+progress. Purple appears only as a small nod to Neeko.
 """
 
 from __future__ import annotations
 
-# -- ground ---------------------------------------------------------------
-NAVY_900 = "#0A101C"   # window ground
-NAVY_850 = "#0E1626"   # header base
-NAVY_800 = "#121C30"   # panel
-NAVY_750 = "#16233A"   # raised panel
-NAVY_700 = "#1C2C47"   # control track
-NAVY_600 = "#26395A"   # hover
-LINE = "#1F3050"       # hairline separators
+# ---------------------------------------------------------------- palette ---
 
-# -- orange, the signature ------------------------------------------------
-ORANGE = "#FF8A3D"
-ORANGE_DEEP = "#F2661C"
-ORANGE_SOFT = "#FFB067"
-PEACH = "#FFD6B0"
+BACKGROUND = "#0B111C"        # window ground, deep navy
+SURFACE = "#111A29"           # elevated panel
+SURFACE_HOVER = "#172336"
+SURFACE_ACTIVE = "#1E2D45"
+SURFACE_SUNKEN = "#080D16"    # inputs, wells
 
-# -- light blue, the state colour ----------------------------------------
-SKY = "#7DD3FC"
-SKY_BRIGHT = "#38BDF8"
-SKY_DEEP = "#0C87C4"
-CYAN = "#67E8F9"
+BORDER = "#1E2A3D"
+BORDER_STRONG = "#2C3D55"
 
-# -- neutrals -------------------------------------------------------------
-CREAM = "#FFF7EC"
-TEXT = "#EEF4FF"
-MUTED = "#8FA6C4"
-DIM = "#5A6E8C"
+TEXT_PRIMARY = "#F4F7FC"
+TEXT_SECONDARY = "#A6B4CA"
+TEXT_MUTED = "#6B7B93"
 
-# -- semantics ------------------------------------------------------------
-SUCCESS = "#3ED598"
-WARNING = "#FFC861"
-DANGER = "#FF6B6B"
+ACCENT = "#FF8A3D"            # orange, the signature
+ACCENT_HOVER = "#FFA260"
+ACCENT_PRESSED = "#E8701F"
+ACCENT_INK = "#241206"        # text that sits on orange
 
-# -- Neeko accents, used sparingly ---------------------------------------
-NEEKO_PINK = "#E84AA8"
-NEEKO_MINT = "#4FD8C8"
+BLUE = "#5CC8F5"              # light blue, the state colour
+BLUE_HOVER = "#82D8F8"
+BLUE_DEEP = "#2A94C8"
 
-RADIUS = 18
-PANEL_RADIUS = 14
-CONTROL_RADIUS = 10
+SUCCESS = "#4ADE9B"
+WARNING = "#F5C451"
+ERROR = "#F87171"
+NEEKO = "#C86BD8"             # a restrained nod to her palette
+
+# ---------------------------------------------------------------- spacing ---
+
+SPACE_1 = 4
+SPACE_2 = 8
+SPACE_3 = 12
+SPACE_4 = 16
+SPACE_5 = 20
+SPACE_6 = 24
+SPACE_8 = 32
+
+RADIUS_SM = 8
+RADIUS_MD = 12
+RADIUS_LG = 16
+RADIUS_XL = 20
+
+# Control geometry, so nothing is sized by eye.
+CONTROL_HEIGHT = 34
+BUTTON_HEIGHT = 32
+TOGGLE_WIDTH = 40
+TOGGLE_HEIGHT = 22
+ICON_SM = 28
+ICON_MD = 40
+ICON_LG = 56
+
+WINDOW_WIDTH = 452
+WINDOW_MIN_HEIGHT = 560
+WINDOW_MAX_HEIGHT = 860
+SHADOW_MARGIN = 16
+
+# --------------------------------------------------------------- movement ---
+
+DURATION_FAST = 120
+DURATION_NORMAL = 180
+DURATION_SLOW = 260
+
+# ------------------------------------------------------------- typography ---
 
 FONT = "Segoe UI"
 MONO = "Consolas"
 
-# What colour a given app state paints itself in.
-STATE_COLOURS = {
-    "DISCONNECTED": DIM,
-    "WAITING": MUTED,
-    "LOBBY": SKY,
-    "QUEUED": SKY_BRIGHT,
-    "READY_CHECK": ORANGE,
-    "ACCEPTED": SUCCESS,
-    "CHAMP_SELECT": SKY_BRIGHT,
-    "WAITING_FOR_MY_TURN": SKY,
-    "MY_TURN": ORANGE,
-    "LOCKED": SUCCESS,
-    "IN_GAME": CYAN,
-    "POST_GAME": MUTED,
+TYPE = {
+    "display": (20, 600),
+    "title": (15, 600),
+    "metric": (23, 700),
+    "body": (13, 400),
+    "body-strong": (13, 600),
+    "secondary": (12, 400),
+    "small": (11, 400),
+    "caption": (10, 700),
 }
 
-LEVEL_COLOURS = {
-    "ok": SUCCESS,
-    "info": TEXT,
-    "warn": WARNING,
-    "error": DANGER,
-    "debug": DIM,
-}
+
+def font_css(role: str, colour: str) -> str:
+    size, weight = TYPE[role]
+    spacing = "letter-spacing: 1.3px;" if role == "caption" else ""
+    return f"font-size: {size}px; font-weight: {weight}; color: {colour}; {spacing}"
 
 
 def rgba(hex_colour: str, alpha: float) -> str:
-    """`#RRGGBB` plus an alpha, in the form Qt stylesheets want."""
     value = hex_colour.lstrip("#")
     red, green, blue = (int(value[index:index + 2], 16) for index in (0, 2, 4))
     return f"rgba({red}, {green}, {blue}, {alpha:.3f})"
 
 
+# ------------------------------------------------------------- stylesheet ---
+
+
 def stylesheet() -> str:
+    """Only the stock Qt controls; everything with real shape is painted."""
     return f"""
     QWidget {{
-        color: {TEXT};
+        color: {TEXT_PRIMARY};
         font-family: "{FONT}";
         font-size: 13px;
     }}
-    QWidget#root {{
-        background: {NAVY_900};
-        border: 1px solid {LINE};
-        border-radius: {RADIUS}px;
-    }}
 
-    /* -- type scale -------------------------------------------------- */
-    QLabel#display   {{ font-size: 19px; font-weight: 700; color: {CREAM}; }}
-    QLabel#title     {{ font-size: 15px; font-weight: 700; color: {TEXT}; }}
-    QLabel#caption   {{ font-size: 10px; font-weight: 700; letter-spacing: 2px;
-                        color: {DIM}; }}
-    QLabel#body      {{ font-size: 13px; color: {TEXT}; }}
-    QLabel#muted     {{ font-size: 12px; color: {MUTED}; }}
-    QLabel#small     {{ font-size: 11px; color: {DIM}; }}
-    QLabel#accent    {{ font-size: 13px; font-weight: 600; color: {ORANGE}; }}
-    QLabel#sky       {{ font-size: 12px; font-weight: 600; color: {SKY}; }}
-    QLabel#warning   {{ font-size: 11px; color: {WARNING}; }}
-    QLabel#danger    {{ font-size: 11px; color: {DANGER}; }}
+    QLabel#display      {{ {font_css("display", TEXT_PRIMARY)} }}
+    QLabel#title        {{ {font_css("title", TEXT_PRIMARY)} }}
+    QLabel#metric       {{ {font_css("metric", TEXT_PRIMARY)} }}
+    QLabel#body         {{ {font_css("body", TEXT_PRIMARY)} }}
+    QLabel#body-strong  {{ {font_css("body-strong", TEXT_PRIMARY)} }}
+    QLabel#secondary    {{ {font_css("secondary", TEXT_SECONDARY)} }}
+    QLabel#small        {{ {font_css("small", TEXT_MUTED)} }}
+    QLabel#caption      {{ {font_css("caption", TEXT_MUTED)} }}
+    QLabel#accent       {{ {font_css("body-strong", ACCENT)} }}
+    QLabel#blue         {{ {font_css("secondary", BLUE)} }}
+    QLabel#success      {{ {font_css("small", SUCCESS)} }}
+    QLabel#warning      {{ {font_css("small", WARNING)} }}
+    QLabel#error        {{ {font_css("small", ERROR)} }}
 
-    /* -- inputs ------------------------------------------------------- */
     QLineEdit {{
-        background: {NAVY_750};
-        border: 1px solid {LINE};
-        border-radius: {CONTROL_RADIUS}px;
-        padding: 8px 12px;
-        color: {TEXT};
-        selection-background-color: {ORANGE_DEEP};
+        background: {SURFACE_SUNKEN};
+        border: 1px solid {BORDER};
+        border-radius: {RADIUS_SM}px;
+        padding: 0px 12px;
+        min-height: {CONTROL_HEIGHT}px;
+        max-height: {CONTROL_HEIGHT}px;
+        color: {TEXT_PRIMARY};
+        selection-background-color: {ACCENT_PRESSED};
+        selection-color: {TEXT_PRIMARY};
     }}
-    QLineEdit:hover  {{ border: 1px solid {NAVY_600}; }}
-    QLineEdit:focus  {{ border: 1px solid {SKY_BRIGHT};
-                        background: {NAVY_700}; }}
+    QLineEdit:hover {{ border: 1px solid {BORDER_STRONG}; }}
+    QLineEdit:focus {{ border: 1px solid {BLUE}; background: {SURFACE}; }}
 
-    /* -- buttons ------------------------------------------------------ */
     QPushButton {{
-        background: {NAVY_700};
-        border: 1px solid {LINE};
-        border-radius: {CONTROL_RADIUS}px;
-        padding: 8px 18px;
-        color: {TEXT};
+        background: {SURFACE_HOVER};
+        border: 1px solid {BORDER};
+        border-radius: {RADIUS_SM}px;
+        padding: 0px 16px;
+        min-height: {BUTTON_HEIGHT}px;
+        color: {TEXT_PRIMARY};
+        font-size: 12px;
         font-weight: 600;
     }}
-    QPushButton:hover   {{ background: {NAVY_600}; border: 1px solid {SKY_DEEP}; }}
-    QPushButton:pressed {{ background: {NAVY_750}; }}
-    QPushButton:disabled {{ color: {DIM}; border: 1px solid {LINE}; background: {NAVY_800}; }}
+    QPushButton:hover   {{ background: {SURFACE_ACTIVE}; border: 1px solid {BORDER_STRONG}; }}
+    QPushButton:pressed {{ background: {SURFACE}; }}
+    QPushButton:focus   {{ border: 1px solid {BLUE}; }}
+    QPushButton:disabled {{ color: {TEXT_MUTED}; background: {SURFACE}; }}
 
     QPushButton#primary {{
-        background: {ORANGE};
-        border: 1px solid {ORANGE};
-        color: #26150A;
+        background: {ACCENT};
+        border: 1px solid {ACCENT};
+        color: {ACCENT_INK};
     }}
-    QPushButton#primary:hover   {{ background: {ORANGE_SOFT}; border: 1px solid {ORANGE_SOFT}; }}
-    QPushButton#primary:pressed {{ background: {ORANGE_DEEP}; }}
-
-    QPushButton#quiet {{
-        background: transparent;
-        border: 1px solid {LINE};
-        color: {MUTED};
-    }}
-    QPushButton#quiet:hover {{ color: {TEXT}; border: 1px solid {SKY_DEEP}; }}
+    QPushButton#primary:hover   {{ background: {ACCENT_HOVER}; border-color: {ACCENT_HOVER}; }}
+    QPushButton#primary:pressed {{ background: {ACCENT_PRESSED}; }}
 
     QPushButton#link {{
         background: transparent;
         border: none;
-        color: {SKY};
-        padding: 2px 4px;
-        font-weight: 600;
+        color: {BLUE};
+        padding: 0px 4px;
+        min-height: 20px;
+        font-size: 12px;
     }}
-    QPushButton#link:hover {{ color: {CYAN}; }}
+    QPushButton#link:hover  {{ color: {BLUE_HOVER}; }}
+    QPushButton#link:focus  {{ border: none; text-decoration: underline; }}
 
-    QPushButton#windowButton {{
+    QListWidget {{
         background: transparent;
         border: none;
-        color: {MUTED};
-        font-size: 14px;
-        padding: 0px;
-        border-radius: 6px;
-    }}
-    QPushButton#windowButton:hover {{ color: {CREAM}; background: {rgba(SKY, 0.16)}; }}
-    QPushButton#windowButton[danger="true"]:hover {{ color: #2A0F0F; background: {DANGER}; }}
-
-    /* -- champion results --------------------------------------------- */
-    QListWidget {{
-        background: {NAVY_750};
-        border: 1px solid {SKY_DEEP};
-        border-radius: {CONTROL_RADIUS}px;
         outline: none;
-        padding: 5px;
     }}
     QListWidget::item {{
-        padding: 6px 8px;
-        border-radius: 8px;
-        color: {TEXT};
+        border-radius: {RADIUS_SM}px;
+        padding: 0px;
+        margin: 1px 0px;
+        color: {TEXT_PRIMARY};
     }}
-    QListWidget::item:hover    {{ background: {NAVY_600}; }}
-    QListWidget::item:selected {{ background: {rgba(ORANGE, 0.22)}; color: {CREAM}; }}
+    QListWidget::item:hover    {{ background: {SURFACE_HOVER}; }}
+    QListWidget::item:selected {{ background: {rgba(ACCENT, 0.16)}; color: {TEXT_PRIMARY}; }}
 
-    /* -- log ----------------------------------------------------------- */
     QTextEdit {{
-        background: {NAVY_900};
-        border: 1px solid {LINE};
-        border-radius: {CONTROL_RADIUS}px;
+        background: {SURFACE_SUNKEN};
+        border: 1px solid {BORDER};
+        border-radius: {RADIUS_SM}px;
         font-family: "{MONO}", monospace;
         font-size: 11px;
-        color: {MUTED};
+        color: {TEXT_SECONDARY};
+        padding: 6px;
     }}
 
     QComboBox {{
-        background: {NAVY_750};
-        border: 1px solid {LINE};
-        border-radius: {CONTROL_RADIUS}px;
-        padding: 6px 10px;
-        color: {TEXT};
+        background: {SURFACE_SUNKEN};
+        border: 1px solid {BORDER};
+        border-radius: {RADIUS_SM}px;
+        padding: 0px 10px;
+        min-height: {CONTROL_HEIGHT}px;
+        color: {TEXT_PRIMARY};
     }}
-    QComboBox:hover {{ border: 1px solid {SKY_DEEP}; }}
-    QComboBox::drop-down {{ border: none; width: 18px; }}
+    QComboBox:hover {{ border: 1px solid {BORDER_STRONG}; }}
+    QComboBox:focus {{ border: 1px solid {BLUE}; }}
+    QComboBox::drop-down {{ border: none; width: 20px; }}
     QComboBox QAbstractItemView {{
-        background: {NAVY_750};
-        border: 1px solid {SKY_DEEP};
-        border-radius: 8px;
-        selection-background-color: {rgba(ORANGE, 0.25)};
-        color: {TEXT};
+        background: {SURFACE};
+        border: 1px solid {BORDER_STRONG};
+        border-radius: {RADIUS_SM}px;
+        selection-background-color: {rgba(ACCENT, 0.18)};
+        color: {TEXT_PRIMARY};
         padding: 4px;
+        outline: none;
     }}
 
-    /* -- scrolling ------------------------------------------------------ */
     QScrollArea {{ background: transparent; border: none; }}
-    QScrollBar:vertical {{ background: transparent; width: 9px; margin: 6px 3px 6px 0; }}
+    QScrollBar:vertical {{ background: transparent; width: 10px; margin: 4px 2px; }}
     QScrollBar::handle:vertical {{
-        background: {NAVY_600};
+        background: {BORDER_STRONG};
         border-radius: 4px;
-        min-height: 36px;
+        min-height: 40px;
     }}
-    QScrollBar::handle:vertical:hover {{ background: {SKY_DEEP}; }}
+    QScrollBar::handle:vertical:hover {{ background: {BLUE_DEEP}; }}
     QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
     QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{ background: transparent; }}
 
     QToolTip {{
-        background: {NAVY_750};
-        color: {TEXT};
-        border: 1px solid {SKY_DEEP};
-        border-radius: 8px;
+        background: {SURFACE};
+        color: {TEXT_PRIMARY};
+        border: 1px solid {BORDER_STRONG};
+        border-radius: {RADIUS_SM}px;
         padding: 6px 9px;
     }}
 
-    QDialog {{ background: {NAVY_900}; }}
+    QDialog {{ background: {BACKGROUND}; }}
     """
