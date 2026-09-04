@@ -24,9 +24,11 @@ CACHE_DIR = (
     / "champions"
 )
 
-# Local client asset routes.
+# Local client asset routes. The icon has a stable address; the splash does
+# not -- its real path is spelled out in the champion's own detail document,
+# so it has to be looked up first.
 LCU_ICON = "/lol-game-data/assets/v1/champion-icons/{champion_id}.png"
-LCU_SPLASH = "/lol-game-data/assets/v1/champion-splashes/{champion_id}/{skin_id}.jpg"
+LCU_DETAIL = "/lol-game-data/assets/v1/champions/{champion_id}.json"
 
 # Riot's public CDN, used when the client is not running.
 CDN_ICON = "https://ddragon.leagueoflegends.com/cdn/{version}/img/champion/{alias}.png"
@@ -60,16 +62,28 @@ def store(kind: str, champion_id: int, data: bytes) -> None:
         pass  # a cache we cannot write is still a working app, just slower
 
 
+def _splash_path(champion_id: int, client) -> str | None:
+    """Ask the client where this champion's default splash actually lives."""
+    status, body = client.get(LCU_DETAIL.format(champion_id=champion_id))
+    if status != 200 or not isinstance(body, dict):
+        return None
+    for skin in body.get("skins") or []:
+        if not isinstance(skin, dict):
+            continue
+        path = skin.get("splashPath") or skin.get("uncenteredSplashPath")
+        if path:
+            return str(path)
+    return None
+
+
 def _from_client(kind: str, champion_id: int, client) -> bytes | None:
     if client is None:
         return None
-    path = (
-        LCU_ICON.format(champion_id=champion_id)
-        if kind == ICON
-        else LCU_SPLASH.format(champion_id=champion_id, skin_id=champion_id * 1000)
-    )
     try:
-        return client.get_bytes(path)
+        if kind == ICON:
+            return client.get_bytes(LCU_ICON.format(champion_id=champion_id))
+        path = _splash_path(champion_id, client)
+        return client.get_bytes(path) if path else None
     except Exception:  # a dead client just means we try the CDN
         return None
 
