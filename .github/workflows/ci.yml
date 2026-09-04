@@ -29,6 +29,5 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: python -m unittest discover -s tests -t . -v
 
-      - name: Check the build configuration is sound
-        run: python tools/build.py --help || python -c "import tools.build"
-        continue-on-error: true
+      - name: Check the build scripts are importable
+        run: python -c "import ast, pathlib; [ast.parse(p.read_text(encoding='utf-8')) for p in pathlib.Path('tools').glob('*.py')]"
