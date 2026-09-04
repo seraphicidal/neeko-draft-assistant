@@ -125,6 +125,10 @@ def build_installer() -> Path:
 def main() -> int:
     arguments = set(sys.argv[1:])
 
+    if arguments - {"--clean", "--exe"}:
+        print(__doc__)
+        return 0
+
     if "--clean" in arguments:
         for folder in (DIST, BUILD):
             shutil.rmtree(folder, ignore_errors=True)
