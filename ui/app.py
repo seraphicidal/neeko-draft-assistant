@@ -88,6 +88,7 @@ class Application:
     def run(self) -> int:
         self.watcher.start()
         self.art.start()
+        self.window.request_art()
 
         if self.settings.launch_minimized:
             self.tray.notify("Neeko is watching your queue from here.")

@@ -459,6 +459,20 @@ class MainWindow(QWidget):
             else:
                 self.art_wanted.emit(champion_art.ICON, champion_id)
 
+    def request_art(self) -> None:
+        """Ask for the champion art.
+
+        `_load_from_settings` runs while the window is still being built, before
+        anything is listening to `art_wanted`, so the first request has to be
+        made again once the loader is wired up.
+        """
+        self._apply_champion(
+            self.settings.preferred_champion_id, self.settings.preferred_champion_name
+        )
+        self._apply_backup(
+            self.settings.backup_champion_id, self.settings.backup_champion_name
+        )
+
     def refresh_names_from_catalog(self) -> None:
         for id_attr, name_attr in (
             ("preferred_champion_id", "preferred_champion_name"),
