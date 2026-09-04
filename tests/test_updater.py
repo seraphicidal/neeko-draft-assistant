@@ -212,11 +212,22 @@ class BuildConfigurationTest(unittest.TestCase):
 
         self.assertEqual(deletions, [], "an uninstall must not remove her settings")
 
-    def test_the_spec_bundles_the_assets_and_hides_the_console(self):
+    def test_the_spec_bundles_the_assets(self):
         spec = (self.ROOT / "packaging" / "neeko.spec").read_text(encoding="utf-8")
 
         self.assertIn('"assets"', spec)
-        self.assertIn("console=False", spec)
+
+    def test_a_released_build_never_opens_a_console(self):
+        # A console build can be asked for while debugging, but only ever by
+        # setting NEEKO_CONSOLE, and the release workflow must not set it.
+        spec = (self.ROOT / "packaging" / "neeko.spec").read_text(encoding="utf-8")
+        workflow = (self.ROOT / ".github" / "workflows" / "release.yml").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertNotIn("console=True", spec)
+        self.assertIn("NEEKO_CONSOLE", spec)
+        self.assertNotIn("NEEKO_CONSOLE", workflow)
 
     def test_the_release_workflow_runs_the_tests_before_building(self):
         workflow = (self.ROOT / ".github" / "workflows" / "release.yml").read_text(

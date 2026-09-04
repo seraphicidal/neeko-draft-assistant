@@ -4,6 +4,7 @@
     pyinstaller packaging/neeko.spec --noconfirm
 """
 
+import os
 from pathlib import Path
 
 ROOT = Path(SPECPATH).parent  # noqa: F821 - SPECPATH is injected by PyInstaller
@@ -82,7 +83,9 @@ executable = EXE(  # noqa: F821
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,
-    console=False,          # a tray app must not flash a console
+    # A tray app must not flash a console. Set NEEKO_CONSOLE=1 to build a
+    # debuggable executable that prints its traceback instead of vanishing.
+    console=bool(os.environ.get("NEEKO_CONSOLE")),
     disable_windowed_traceback=False,
     icon=str(ROOT / "assets" / "icon.ico"),
     version=str(VERSION_RESOURCE) if VERSION_RESOURCE.exists() else None,
