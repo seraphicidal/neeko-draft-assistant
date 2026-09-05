@@ -10,7 +10,7 @@ ships in the app, and it never touches your real settings.
     connected  client open, nothing happening myturn    your pick is live
     queue      searching for a match          game      in game
     ready      the queue pop                  settings  the settings window
-    pick       the champion search overlay
+    pick       the champion search overlay      about     the About page
 """
 
 from __future__ import annotations
@@ -23,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from league import champion_select as cs, chat, gameflow, matchmaking as mm  # noqa: E402
 from league.lcu_client import ClientUnavailable  # noqa: E402
+from ui.settings_window import SECTIONS as SETTINGS_SECTIONS  # noqa: E402
 from tests.mocks import (  # noqa: E402
     FakeLcu,
     action,
@@ -78,6 +79,7 @@ SCENARIOS = {
     "myturn": lambda: draft(my_turn=True),
     "game": lambda: base("InProgress"),
     "settings": lambda: draft(my_turn=False),
+    "about": lambda: base("None"),
     "pick": lambda: base("None"),
 }
 
@@ -115,10 +117,15 @@ def main() -> int:
         client = SCENARIOS.get(scenario, SCENARIOS["draft"])()
         app.watcher._connect_client = lambda: client
 
-    if scenario == "settings":
+    if scenario in ("settings", "about"):
         from PySide6.QtCore import QTimer
 
-        QTimer.singleShot(700, app.open_settings)
+        def open_settings() -> None:
+            app.open_settings()
+            if scenario == "about":
+                app.settings_window.nav.setCurrentRow(len(SETTINGS_SECTIONS) - 1)
+
+        QTimer.singleShot(700, open_settings)
     elif scenario == "pick":
         from PySide6.QtCore import QTimer
 
