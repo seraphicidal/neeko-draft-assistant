@@ -27,7 +27,6 @@ class Champion:
     id: int
     name: str
     alias: str
-    title: str = ""
 
     @property
     def search_key(self) -> str:
@@ -78,11 +77,6 @@ class Catalog:
         champions = _parse(body)
         if not champions:
             return False
-        champions = [
-            champion if champion.title else
-            Champion(champion.id, champion.name, champion.alias, self.title_of(champion.id))
-            for champion in champions
-        ]
         self._replace(champions, "league client")
         return True
 
@@ -106,10 +100,6 @@ class Catalog:
     def name_of(self, champion_id: int) -> str:
         champion = self.by_id(champion_id)
         return champion.name if champion else ""
-
-    def title_of(self, champion_id: int) -> str:
-        champion = self.by_id(champion_id)
-        return champion.title if champion else ""
 
     def alias_of(self, champion_id: int) -> str:
         champion = self.by_id(champion_id)
@@ -148,14 +138,7 @@ def _parse(entries) -> list[Champion]:
         # The client's list carries a id=-1 "None" placeholder; drop it.
         if champion_id <= 0 or not name:
             continue
-        champions.append(
-            Champion(
-                champion_id,
-                name,
-                str(entry.get("alias") or name),
-                str(entry.get("title") or ""),
-            )
-        )
+        champions.append(Champion(champion_id, name, str(entry.get("alias") or name)))
     return champions
 
 

@@ -213,6 +213,7 @@ class MainWindow(QWidget):
         body.addLayout(self._build_footer())
 
         self.overlay = SearchOverlay(self.catalog, self.root)
+        self.overlay.pixmap_for = self._icons.get
         self.overlay.chosen.connect(self._on_champion_chosen)
         self.overlay.dismissed.connect(self._close_overlay)
         self.overlay.art_wanted.connect(self.art_wanted.emit)
@@ -444,8 +445,7 @@ class MainWindow(QWidget):
 
     def _apply_champion(self, slot: str, champion_id: int, name: str) -> None:
         tile = self.primary_tile if slot == PRIMARY else self.backup_tile
-        subtitle = self.catalog.title_of(champion_id) if champion_id else ""
-        tile.set_champion(champion_id, name, subtitle)
+        tile.set_champion(champion_id, name)
         if champion_id:
             tile.set_pixmap(self._icons.get(champion_id))
             if champion_id not in self._icons:
@@ -645,9 +645,6 @@ class MainWindow(QWidget):
 
     def name_of(self, champion_id: int) -> str:
         return self.catalog.name_of(champion_id)
-
-    def title_of(self, champion_id: int) -> str:
-        return self.catalog.title_of(champion_id)
 
     def champion_icon(self, champion_id: int) -> QPixmap | None:
         return self._icons.get(champion_id)

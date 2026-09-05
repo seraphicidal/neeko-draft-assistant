@@ -339,7 +339,7 @@ class SettingsWindow(QDialog):
         page, column = self._page("About")
         column.addWidget(text(APP_NAME, "display"))
         column.addWidget(text(f"Version {__version__}", "accent"))
-        column.addWidget(text("Made for Miska.", "secondary"))
+        column.addWidget(text("Made for Miška.", "secondary"))
 
         link = QPushButton(GITHUB_URL)
         link.setObjectName("link")

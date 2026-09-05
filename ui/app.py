@@ -134,7 +134,11 @@ class Application:
             self.tray.set_status(status.connected, status.detail)
         elif kind == "action":
             self.window.show_action(payload["text"], payload["level"])
-            self.tray.notify(payload["text"])
+            # Hovering, locking and chatting all happen while you are looking
+            # at champion select; the window says so and a toast on top of the
+            # client would only be in the way.
+            if payload.get("notify"):
+                self.tray.notify(payload["text"])
             if payload.get("chime"):
                 self._beep()
         elif kind == "log":

@@ -702,15 +702,18 @@ class ChampionTile(QAbstractButton):
         names = QVBoxLayout()
         names.setSpacing(0)
         self.name = text("Choose a champion", "body-strong" if primary else "body")
-        self.title = text(role_label, "small")
+        # Only shown while the slot is empty; a chosen champion needs no caption.
+        self.hint = text(
+            "your first pick" if primary else "if the first one is gone", "small"
+        )
         names.addWidget(self.name)
-        names.addWidget(self.title)
+        names.addWidget(self.hint)
         layout.addLayout(names, 1)
 
         self.badge = text(role_label.upper(), "caption")
         layout.addWidget(self.badge)
 
-        self.set_champion(0, "", "")
+        self.set_champion(0, "")
 
     def enterEvent(self, _event) -> None:  # noqa: N802 - Qt naming
         self._hover = True
@@ -720,7 +723,7 @@ class ChampionTile(QAbstractButton):
         self._hover = False
         self.update()
 
-    def set_champion(self, champion_id: int, name: str, subtitle: str) -> None:
+    def set_champion(self, champion_id: int, name: str) -> None:
         tone = theme.ACCENT if self._primary else theme.BLUE
         chosen = bool(champion_id)
         self.icon.set_champion(name, tone if chosen else theme.BORDER_STRONG)
@@ -731,7 +734,7 @@ class ChampionTile(QAbstractButton):
                 theme.TEXT_PRIMARY if chosen else theme.TEXT_MUTED,
             )
         )
-        self.title.setText(subtitle or ("your first pick" if self._primary else "if the first is gone"))
+        self.hint.setVisible(not chosen)
         self.badge.setStyleSheet(
             theme.font_css("caption", tone if chosen else theme.TEXT_MUTED)
         )
@@ -764,7 +767,6 @@ class ChampionHero(QWidget):
         self._splash: QPixmap | None = None
         self._icon: QPixmap | None = None
         self._name = ""
-        self._title = ""
         self._tone = theme.ACCENT
 
         layout = QHBoxLayout(self)
@@ -779,20 +781,17 @@ class ChampionHero(QWidget):
         column.addStretch(1)
         self.badge = text("YOUR CHAMPION", "caption")
         self.name_label = text("", "display")
-        self.title_label = text("", "secondary")
         column.addWidget(self.badge)
         column.addWidget(self.name_label)
-        column.addWidget(self.title_label)
         column.addStretch(1)
         layout.addLayout(column, 1)
 
-    def set_champion(self, name: str, title: str, tone: str = theme.ACCENT) -> None:
-        self._name, self._title, self._tone = name, title, tone
+    def set_champion(self, name: str, tone: str = theme.ACCENT) -> None:
+        self._name, self._tone = name, tone
         self.name_label.setText(name or "No champion chosen")
         self.name_label.setStyleSheet(
             theme.font_css("display", theme.TEXT_PRIMARY if name else theme.TEXT_MUTED)
         )
-        self.title_label.setText(title)
         self.badge.setStyleSheet(theme.font_css("caption", tone))
         self.icon.set_champion(name, tone)
         if not name:
@@ -847,6 +846,8 @@ class ChampionHero(QWidget):
 class ChampionResult(QWidget):
     """One row inside the search overlay."""
 
+    HEIGHT = 36
+
     def __init__(self, champion, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.champion = champion
@@ -858,12 +859,7 @@ class ChampionResult(QWidget):
         self.icon.set_champion(champion.name)
         layout.addWidget(self.icon)
 
-        column = QVBoxLayout()
-        column.setSpacing(0)
-        column.addWidget(text(champion.name, "body-strong"))
-        if champion.title:
-            column.addWidget(text(champion.title, "small"))
-        layout.addLayout(column, 1)
+        layout.addWidget(text(champion.name, "body-strong"), 1)
 
     def set_pixmap(self, pixmap: QPixmap | None) -> None:
         self.icon.set_pixmap(pixmap)
@@ -887,6 +883,10 @@ class SearchOverlay(QFrame):
         super().__init__(parent)
         self.catalog = catalog
         self._rows: dict[int, ChampionResult] = {}
+        # Answers "do we already have this icon?". Rows are rebuilt on every
+        # keystroke, and the loader only ever fetches a champion once, so a row
+        # created for a second search would otherwise never be filled in.
+        self.pixmap_for = lambda champion_id: None
         self.setObjectName("overlay")
         self.setStyleSheet(
             f"""
@@ -918,7 +918,7 @@ class SearchOverlay(QFrame):
         layout.addWidget(self.field)
 
         self.results = QListWidget()
-        self.results.setFixedHeight(6 + self.MAX_RESULTS * 40)
+        self.results.setFixedHeight(6 + self.MAX_RESULTS * ChampionResult.HEIGHT)
         self.results.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.results.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.results.itemClicked.connect(self._on_activated)
@@ -963,14 +963,19 @@ class SearchOverlay(QFrame):
         self._rows.clear()
         for champion in champions:
             item = QListWidgetItem()
-            item.setSizeHint(QSize(0, 40))
+            item.setSizeHint(QSize(0, ChampionResult.HEIGHT))
             item.setData(Qt.ItemDataRole.UserRole, champion.id)
             item.setData(Qt.ItemDataRole.UserRole + 1, champion.name)
             row = ChampionResult(champion)
             self.results.addItem(item)
             self.results.setItemWidget(item, row)
             self._rows[champion.id] = row
-            self.art_wanted.emit("icon", champion.id)
+
+            cached = self.pixmap_for(champion.id)
+            if cached is not None:
+                row.set_pixmap(cached)
+            else:
+                self.art_wanted.emit("icon", champion.id)
         if champions:
             self.results.setCurrentRow(0)
         self.hint.setText(

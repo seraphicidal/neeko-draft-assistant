@@ -24,8 +24,7 @@ def main() -> None:
     payload = fetch(f"https://ddragon.leagueoflegends.com/cdn/{version}/data/en_US/champion.json")
 
     champions = sorted(
-        ({"id": int(entry["key"]), "name": entry["name"], "alias": entry["id"],
-          "title": entry.get("title", "")}
+        ({"id": int(entry["key"]), "name": entry["name"], "alias": entry["id"]}
          for entry in payload["data"].values()),
         key=lambda champion: champion["name"],
     )
