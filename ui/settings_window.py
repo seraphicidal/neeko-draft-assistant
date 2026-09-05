@@ -9,12 +9,14 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 from PySide6.QtCore import QUrl, Qt, Signal
 from PySide6.QtGui import QDesktopServices, QTextCursor
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
+    QFileDialog,
     QFrame,
     QHBoxLayout,
     QLineEdit,
@@ -28,7 +30,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from core import startup
+from core import sound, startup
 from core.settings import CONFIG_DIR, MAX_DELAY
 from core.version import APP_NAME, GITHUB_URL, __version__
 from ui import assets, theme
@@ -41,6 +43,7 @@ class SettingsWindow(QDialog):
     changed = Signal()
     check_updates = Signal()
     install_update = Signal()
+    preview_sound = Signal()
 
     def __init__(self, settings, log, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -210,7 +213,39 @@ class SettingsWindow(QDialog):
         column.addWidget(hint)
 
         column.addSpacing(theme.SPACE_3)
-        self._row(column, "Sound on accept", "Two short tones when a queue is answered.", "sound")
+        column.addWidget(Divider())
+        column.addSpacing(theme.SPACE_2)
+        self.sound_row = self._row(
+            column,
+            "Sound cue",
+            "A short sound when a queue is answered. Nothing else makes a noise.",
+            "sound",
+            on_change=lambda _value: self._render_sound(),
+        )
+
+        self.sound_name = text("", "secondary")
+        self.sound_name.setWordWrap(True)
+        column.addWidget(self.sound_name)
+
+        buttons = QHBoxLayout()
+        buttons.setSpacing(theme.SPACE_2)
+        self.sound_choose = QPushButton("Choose an MP3...")
+        self.sound_choose.clicked.connect(self._on_choose_sound)
+        buttons.addWidget(self.sound_choose)
+        self.sound_test = QPushButton("Play it")
+        self.sound_test.clicked.connect(self.preview_sound.emit)
+        buttons.addWidget(self.sound_test)
+        self.sound_clear = QPushButton("Back to the chime")
+        self.sound_clear.clicked.connect(self._on_clear_sound)
+        buttons.addWidget(self.sound_clear)
+        buttons.addStretch(1)
+        column.addLayout(buttons)
+
+        self.sound_note = text("", "error")
+        self.sound_note.setWordWrap(True)
+        self.sound_note.hide()
+        column.addWidget(self.sound_note)
+        self._render_sound()
         column.addStretch(1)
         return page
 
@@ -381,6 +416,52 @@ class SettingsWindow(QDialog):
         self.settings.save()
         self.changed.emit()
 
+    def _render_sound(self) -> None:
+        """Say which sound is in use, and grey the buttons out when it is off."""
+        chosen = self.settings.sound_file
+        name = Path(chosen).name if chosen else ""
+        if not chosen:
+            self.sound_name.setText("Neeko's own two tones.")
+        elif Path(chosen).is_file():
+            self.sound_name.setText(f"Playing {name}")
+        else:
+            self.sound_name.setText(f"{name} is missing, so the chime plays instead.")
+        for button in (self.sound_choose, self.sound_test, self.sound_clear):
+            button.setEnabled(self.settings.sound)
+        self.sound_clear.setVisible(bool(chosen))
+
+    def _on_choose_sound(self) -> None:
+        chosen, _filter = QFileDialog.getOpenFileName(
+            self, "Choose a sound cue", str(Path.home()), sound.FILE_FILTER
+        )
+        if not chosen:
+            return
+        self.sound_note.hide()
+        try:
+            installed = sound.install(chosen)
+        except sound.SoundError as exc:
+            self._sound_problem(str(exc))
+            return
+        if not sound.Cue().playable(installed):
+            self._sound_problem("Windows could not play that file. Try an MP3 or a WAV.")
+            return
+        self.settings.sound_file = str(installed)
+        self.settings.save()
+        self._render_sound()
+        self.changed.emit()
+        self.preview_sound.emit()
+
+    def _on_clear_sound(self) -> None:
+        self.settings.sound_file = ""
+        self.settings.save()
+        self.sound_note.hide()
+        self._render_sound()
+        self.changed.emit()
+
+    def _sound_problem(self, message: str) -> None:
+        self.sound_note.setText(message)
+        self.sound_note.show()
+
     def _on_message(self, value: str) -> None:
         if self._building:
             return
@@ -451,4 +532,6 @@ class SettingsWindow(QDialog):
         self.delay_slider.setValue(self.settings.accept_delay)
         self._render_delay(self.settings.accept_delay)
         self.level_box.setCurrentIndex(1 if self.settings.debug_logging else 0)
+        self.sound_row.setChecked(self.settings.sound)
+        self._render_sound()
         self._building = False

@@ -16,6 +16,7 @@ from PySide6.QtWidgets import QApplication
 
 from core import updater
 from core.logbook import LogBook
+from core.sound import Cue
 from core.settings import Settings
 from core.version import APP_NAME, GITHUB_URL, __version__
 from core.watcher import Watcher
@@ -58,6 +59,7 @@ class Application:
         self.bridge.update_downloaded.connect(self._on_update_downloaded)
 
         self.watcher = Watcher(self.settings, self.catalog, self.log, self.bridge.event.emit)
+        self.cue = Cue()
         self.art = ArtLoader(self.catalog)
         self.art.loaded.connect(self._on_art)
 
@@ -104,6 +106,7 @@ class Application:
         self.settings.save()
         self.watcher.stop()
         self.art.stop()
+        self.cue.stop()
         self.tray.hide()
         self.qt.quit()
 
@@ -111,6 +114,7 @@ class Application:
         if self.settings_window is None:
             self.settings_window = SettingsWindow(self.settings, self.log, None)
             self.settings_window.changed.connect(self._on_settings_changed)
+            self.settings_window.preview_sound.connect(self._preview_cue)
             self.settings_window.check_updates.connect(lambda: self.check_updates(manual=True))
             self.settings_window.install_update.connect(self.start_update)
         self.settings_window.sync_from_settings()
@@ -140,7 +144,7 @@ class Application:
             if payload.get("notify"):
                 self.tray.notify(payload["text"])
             if payload.get("chime"):
-                self._beep()
+                self._play_cue()
         elif kind == "log":
             if self.settings_window is not None:
                 entries = self.log.entries()
@@ -278,20 +282,15 @@ class Application:
 
     # -- feedback --------------------------------------------------------------
 
-    def _beep(self) -> None:
-        if not self.settings.sound or sys.platform != "win32":
+    def _play_cue(self) -> None:
+        """The sound the user chose, or the built-in chime."""
+        if not self.settings.sound:
             return
+        self._preview_cue()
 
-        def play() -> None:
-            try:
-                import winsound
-
-                winsound.Beep(988, 90)
-                winsound.Beep(1319, 130)
-            except Exception:  # a missing beep is not worth an error
-                pass
-
-        threading.Thread(target=play, daemon=True).start()
+    def _preview_cue(self) -> None:
+        """The same cue, played because the user pressed the button."""
+        self.cue.play(self.settings.sound_file)
 
 
 def main() -> int:

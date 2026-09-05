@@ -9,6 +9,7 @@ champion select, and it is where all the failsafes live:
 * an unavailable champion is never swapped for a random one
 * every action is attempted a bounded number of times, with backoff
 * a chat message, a hover and an accept happen once per lobby, never twice
+* what was tried on one queue pop is forgotten the moment that pop is over
 """
 
 from __future__ import annotations
@@ -101,6 +102,7 @@ class _Attempts:
 PHASE_STATES = {
     gameflow.LOBBY: AppState.LOBBY,
     gameflow.MATCHMAKING: AppState.QUEUED,
+    gameflow.READY_CHECK: AppState.READY_CHECK,
     gameflow.IN_PROGRESS: AppState.IN_GAME,
     gameflow.GAME_START: AppState.IN_GAME,
     "Reconnect": AppState.IN_GAME,
@@ -116,6 +118,7 @@ class StateMachine:
     def __init__(self) -> None:
         self.state = AppState.DISCONNECTED
         self._pop_seen_at: float | None = None
+        self._pop_timer = 0.0
         self._session_identity = ""
         self._declared_champion = 0
         self._attempts: dict[IntentKind, _Attempts] = {}
@@ -129,6 +132,7 @@ class StateMachine:
 
     def _reset_queue(self) -> None:
         self._pop_seen_at = None
+        self._pop_timer = 0.0
         self._attempts[IntentKind.ACCEPT_READY_CHECK] = _Attempts()
 
     def _reset_draft(self, identity: str) -> None:
@@ -172,7 +176,15 @@ class StateMachine:
             self._reset_draft("")
             return Decision(AppState.DISCONNECTED, detail="Waiting for League Client...")
 
-        if snapshot.ready_check is not None:
+        # The client answers the ready-check endpoint even when nothing is
+        # being asked of us, with a payload that reads `Invalid`. Only a live
+        # one is a match to answer; anything else means the last pop is over,
+        # so the accept is armed again for the next one. Without that, a
+        # declined match -- which drops you straight back into the queue,
+        # never leaving the matchmaking phase -- would leave the accept
+        # permanently spent.
+        pop = snapshot.ready_check
+        if pop is not None and pop.is_live:
             return self._decide_queue(snapshot, settings)
         self._reset_queue()
 
@@ -188,8 +200,12 @@ class StateMachine:
 
     def _decide_queue(self, snapshot: Snapshot, settings) -> Decision:
         pop = snapshot.ready_check
-        if not pop.is_live:
-            return Decision(AppState.READY_CHECK, detail="Match found")
+        # A countdown that jumped backwards is a second pop we caught without
+        # ever seeing the quiet moment between the two. The margin is only
+        # there to tolerate a jittery float, not a real second of the clock.
+        if pop.timer < self._pop_timer - 0.25:
+            self._reset_queue()
+        self._pop_timer = pop.timer
 
         if pop.player_response == mm.ACCEPTED:
             return Decision(AppState.ACCEPTED, detail="Match accepted")

@@ -4,7 +4,7 @@ Everything else -- the window, the settings About page, the updater, the
 installer script and the CI workflow -- reads from here.
 """
 
-__version__ = "1.0.4"
+__version__ = "1.0.5"
 
 APP_NAME = "Neeko's Little Draft Assistant"
 APP_SHORT_NAME = "Neeko Draft Assistant"

@@ -146,6 +146,33 @@ class QueueTest(WatcherTestCase):
         actions = [payload for kind, payload in self.events if kind == "action"]
         self.assertTrue(actions[0]["notify"], "you are away from the screen for this one")
 
+    def test_a_declined_match_does_not_end_the_auto_accept(self):
+        client = FakeLcu(
+            {
+                gameflow.ENDPOINT: (200, "ReadyCheck"),
+                mm.READY_CHECK: (200, ready_check_payload()),
+                ("POST", mm.ACCEPT): (204, None),
+            }
+        )
+        watcher, settings = self.build(client)
+        step(watcher)  # connect
+        step(watcher)  # the pop, accepted
+        self.assertEqual(client.count("POST", mm.ACCEPT), 1)
+
+        # Someone declined. Back to searching -- and the phase never left the
+        # queue, so the endpoint keeps answering with an idle payload.
+        client.routes[gameflow.ENDPOINT] = (200, "Matchmaking")
+        client.routes[mm.READY_CHECK] = (200, ready_check_payload(state="Invalid", timer=0.0))
+        step(watcher)
+        self.assertEqual(self.statuses()[-1].state, "QUEUED")
+
+        client.routes[gameflow.ENDPOINT] = (200, "ReadyCheck")
+        client.routes[mm.READY_CHECK] = (200, ready_check_payload())
+        step(watcher)
+
+        self.assertEqual(client.count("POST", mm.ACCEPT), 2)
+        self.assertEqual(settings.accepted_total, 2)
+
     def test_a_refused_accept_is_retried_but_not_forever(self):
         client = FakeLcu(
             {

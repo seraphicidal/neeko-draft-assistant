@@ -111,11 +111,14 @@ def session_payload(
     }
 
 
-def ready_check_payload(response: str = "None", state: str = "InProgress") -> dict:
+def ready_check_payload(
+    response: str = "None", state: str = "InProgress", timer: float = 1.0
+) -> dict:
+    """A queue pop. `state="Invalid"` is what the client answers between pops."""
     return {
         "state": state,
         "playerResponse": response,
-        "timer": 1.0,
+        "timer": timer,
         "declinerIds": [],
         "dodgeWarning": "None",
     }

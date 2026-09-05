@@ -10,7 +10,8 @@ ships in the app, and it never touches your real settings.
     connected  client open, nothing happening myturn    your pick is live
     queue      searching for a match          game      in game
     ready      the queue pop                  settings  the settings window
-    pick       the champion search overlay      about     the About page
+    pick       the champion search overlay    about     the About page
+    sound      the sound cue settings
 """
 
 from __future__ import annotations
@@ -81,7 +82,31 @@ SCENARIOS = {
     "settings": lambda: draft(my_turn=False),
     "about": lambda: base("None"),
     "pick": lambda: base("None"),
+    "sound": lambda: base("None"),
 }
+
+# Which settings page each settings scenario opens on.
+SETTINGS_PAGE = {"about": "About", "sound": "Queue"}
+
+
+def _a_sound_file(folder: Path) -> Path:
+    """Half a second of a sine wave, so the cue settings have something to show."""
+    import math
+    import struct
+    import wave
+
+    path = folder / "my cue.wav"
+    with wave.open(str(path), "w") as handle:
+        handle.setnchannels(1)
+        handle.setsampwidth(2)
+        handle.setframerate(22050)
+        handle.writeframes(
+            b"".join(
+                struct.pack("<h", int(6000 * math.sin(2 * math.pi * 660 * frame / 22050)))
+                for frame in range(11025)
+            )
+        )
+    return path
 
 
 def main() -> int:
@@ -106,6 +131,8 @@ def main() -> int:
     app.settings.picks_total = 12
     # A long delay keeps the ready-check countdown on screen to be looked at.
     app.settings.accept_delay = 8.0 if scenario == "ready" else 2.5
+    if scenario == "sound":
+        app.settings.sound_file = str(_a_sound_file(temporary.parent))
     app.window._load_from_settings()
 
     if scenario == "offline":
@@ -117,13 +144,14 @@ def main() -> int:
         client = SCENARIOS.get(scenario, SCENARIOS["draft"])()
         app.watcher._connect_client = lambda: client
 
-    if scenario in ("settings", "about"):
+    if scenario in ("settings", "about", "sound"):
         from PySide6.QtCore import QTimer
 
         def open_settings() -> None:
             app.open_settings()
-            if scenario == "about":
-                app.settings_window.nav.setCurrentRow(len(SETTINGS_SECTIONS) - 1)
+            page = SETTINGS_PAGE.get(scenario)
+            if page:
+                app.settings_window.nav.setCurrentRow(SETTINGS_SECTIONS.index(page))
 
         QTimer.singleShot(700, open_settings)
     elif scenario == "pick":

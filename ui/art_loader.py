@@ -8,11 +8,15 @@ from __future__ import annotations
 
 import queue
 import threading
+import time
 
 from PySide6.QtCore import QObject, Signal
 
 from league import champion_art
 from league.lcu_client import ClientUnavailable, LcuClient, discover
+
+# How long to leave a missing League client alone before looking again.
+CLIENT_RETRY_SECONDS = 5.0
 
 
 class ArtLoader(QObject):
@@ -28,7 +32,7 @@ class ArtLoader(QObject):
         self._lock = threading.Lock()
         self._stop = threading.Event()
         self._client: LcuClient | None = None
-        self._client_tried = False
+        self._client_retry_at = 0.0
         self._thread: threading.Thread | None = None
 
     def start(self) -> None:
@@ -60,10 +64,18 @@ class ArtLoader(QObject):
     # -- worker ----------------------------------------------------------
 
     def _lcu(self) -> LcuClient | None:
-        """Its own client, so nothing is shared with the watcher thread."""
-        if self._client is not None or self._client_tried:
+        """Its own client, so nothing is shared with the watcher thread.
+
+        Looked for again every few seconds rather than once: the app is
+        normally started before League is, and the client serves champion art
+        without touching the internet, so it is worth waiting for.
+        """
+        if self._client is not None:
             return self._client
-        self._client_tried = True
+        now = time.monotonic()
+        if now < self._client_retry_at:
+            return None
+        self._client_retry_at = now + CLIENT_RETRY_SECONDS
         try:
             self._client = LcuClient(discover())
         except ClientUnavailable:
@@ -89,5 +101,8 @@ class ArtLoader(QObject):
             if data:
                 self.loaded.emit(kind, champion_id, data)
             else:
+                # Forgotten rather than remembered as failed: the next time
+                # this champion is shown it gets another go, by which point
+                # the client may well be up.
                 with self._lock:
                     self._seen.discard((kind, champion_id))
