@@ -32,6 +32,7 @@ class Settings:
     auto_accept: bool = True
     accept_delay: float = 0.0
     sound: bool = True
+    sound_file: str = ""      # empty means the built-in chime
 
     # champion select
     auto_declare: bool = True
@@ -107,6 +108,9 @@ class Settings:
         self.preferred_champion_id = max(0, int(self.preferred_champion_id))
         self.backup_champion_id = max(0, int(self.backup_champion_id))
         self.chat_message = str(self.chat_message)[:MAX_MESSAGE]
+        # A cue that has been deleted or unplugged is left in place rather
+        # than quietly forgotten: the chime stands in until it is back.
+        self.sound_file = str(self.sound_file)
         self.accepted_total = max(0, int(self.accepted_total))
         self.picks_total = max(0, int(self.picks_total))
 

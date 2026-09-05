@@ -13,8 +13,13 @@ from tests.mocks import FakeSettings, action, ready_check_payload, session_paylo
 AHRI, NEEKO, LUX = 103, 518, 99
 
 
-def pop(response="None", state="InProgress") -> ReadyCheck:
-    return ReadyCheck.parse(ready_check_payload(response=response, state=state))
+def pop(response="None", state="InProgress", timer=1.0) -> ReadyCheck:
+    return ReadyCheck.parse(ready_check_payload(response=response, state=state, timer=timer))
+
+
+def no_pop() -> ReadyCheck:
+    """What the ready-check endpoint answers when nothing is being asked."""
+    return pop(state="Invalid", timer=0.0)
 
 
 def draft(**kwargs) -> cs.Session:
@@ -127,6 +132,50 @@ class QueueTest(unittest.TestCase):
 
         after_backoff = machine.decide(snap(now=1.5, ready_check=pop()), settings)
         self.assertEqual(kinds(after_backoff), [IntentKind.ACCEPT_READY_CHECK])
+
+    def test_the_endpoint_answering_between_pops_is_not_a_pop(self):
+        # The client serves the ready-check endpoint at all times; with no
+        # match on offer it reads `Invalid`. Treating that as a pop is what
+        # used to leave the app saying "match found" for a whole queue.
+        decision = StateMachine().decide(
+            snap(ready_check=no_pop(), phase="Matchmaking"), FakeSettings()
+        )
+
+        self.assertEqual(decision.state, AppState.QUEUED)
+        self.assertEqual(kinds(decision), [])
+
+    def test_a_declined_match_leaves_the_accept_armed(self):
+        # When a match is declined the client drops everyone straight back
+        # into the queue without ever leaving the matchmaking phase. The
+        # accept has to be armed again anyway, or it is spent for the session.
+        machine, settings = StateMachine(), FakeSettings()
+        succeed(machine, machine.decide(snap(now=1.0, ready_check=pop()), settings))
+        machine.decide(snap(now=2.0, ready_check=pop("Accepted")), settings)
+
+        machine.decide(snap(now=8.0, phase="Matchmaking", ready_check=no_pop()), settings)
+        again = machine.decide(snap(now=30.0, phase="ReadyCheck", ready_check=pop()), settings)
+
+        self.assertEqual(kinds(again), [IntentKind.ACCEPT_READY_CHECK])
+
+    def test_a_second_pop_caught_without_a_gap_is_still_a_second_pop(self):
+        machine, settings = StateMachine(), FakeSettings()
+        succeed(machine, machine.decide(snap(now=1.0, ready_check=pop(timer=8.0)), settings))
+
+        restarted = machine.decide(snap(now=20.0, ready_check=pop(timer=0.4)), settings)
+
+        self.assertEqual(kinds(restarted), [IntentKind.ACCEPT_READY_CHECK])
+
+    def test_the_delay_is_counted_again_for_the_next_pop(self):
+        machine, settings = StateMachine(), FakeSettings(accept_delay=3.0)
+        machine.decide(snap(now=10.0, ready_check=pop()), settings)
+        succeed(machine, machine.decide(snap(now=13.5, ready_check=pop()), settings))
+        machine.decide(snap(now=20.0, phase="Matchmaking", ready_check=no_pop()), settings)
+
+        immediately = machine.decide(snap(now=60.0, ready_check=pop()), settings)
+        after_the_wait = machine.decide(snap(now=63.5, ready_check=pop()), settings)
+
+        self.assertEqual(kinds(immediately), [], "the second pop skipped its delay")
+        self.assertEqual(kinds(after_the_wait), [IntentKind.ACCEPT_READY_CHECK])
 
     def test_a_new_pop_may_be_accepted_again(self):
         machine, settings = StateMachine(), FakeSettings()

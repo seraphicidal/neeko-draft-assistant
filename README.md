@@ -15,6 +15,7 @@ champion select — then stays out of the way in the tray.
 - **A dashboard that follows the game** — the window shows a different scene
   when League is closed, idle, searching, popping, drafting or in a match
 - **Neeko reacts** to what is happening, from the queue to the lock-in
+- **Your own sound cue** — the built-in chime, an MP3 of your choosing, or silence
 - **Windows tray app** — closing the window keeps her watching
 - **Automatic updates** straight from GitHub Releases
 
@@ -57,7 +58,12 @@ Auto lock-in ships **off**, because locking in cannot be undone.
 ## Configuration
 
 Everything is in the main window; **Settings** holds the rest — startup
-behaviour, sound, log level and updates.
+behaviour, the sound cue, log level and updates.
+
+The queue page carries the sound: switch it off entirely, or choose an MP3 (or
+WAV) of your own. The file is copied in beside your settings, so it keeps
+working when the original is moved. Nothing else in the app makes a noise, and
+only the accepted queue raises a Windows notification.
 
 Settings live in `%APPDATA%\NeekoDraftAssistant\config.json`, well away from the
 program folder, so **updating or reinstalling never touches your champion, your

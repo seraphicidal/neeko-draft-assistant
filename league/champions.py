@@ -126,7 +126,16 @@ class Catalog:
 
 
 def _parse(entries) -> list[Champion]:
-    champions = []
+    """One entry per champion, whatever the client hands over.
+
+    Two things in that list are not champions you can pick. There is an
+    `id=-1` "None" placeholder, and since the Jade mode every champion in it
+    appears a second time under an offset id and a prefixed alias
+    (`Jade_Ahri`). Listing those would put a second Ahri in the search that
+    the draft could never lock in, so a name is only ever kept once -- under
+    the lowest id, which is always the real champion.
+    """
+    best: dict[str, Champion] = {}
     for entry in entries or []:
         if not isinstance(entry, dict):
             continue
@@ -135,11 +144,16 @@ def _parse(entries) -> list[Champion]:
         except (TypeError, ValueError):
             continue
         name = str(entry.get("name") or "").strip()
-        # The client's list carries a id=-1 "None" placeholder; drop it.
         if champion_id <= 0 or not name:
             continue
-        champions.append(Champion(champion_id, name, str(entry.get("alias") or name)))
-    return champions
+        alias = str(entry.get("alias") or name).strip()
+        if "_" in alias:
+            continue  # a game mode's own copy; no champion alias has one
+        key = _fold(name)
+        kept = best.get(key)
+        if kept is None or champion_id < kept.id:
+            best[key] = Champion(champion_id, name, alias or name)
+    return list(best.values())
 
 
 def portrait_path(champion_id: int) -> str:

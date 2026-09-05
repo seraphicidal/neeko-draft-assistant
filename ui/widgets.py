@@ -647,6 +647,9 @@ class ChampionIcon(QWidget):
         self._pixmap = pixmap
         self.update()
 
+    def has_pixmap(self) -> bool:
+        return self._pixmap is not None and not self._pixmap.isNull()
+
     def paintEvent(self, _event) -> None:  # noqa: N802 - Qt naming
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -864,6 +867,9 @@ class ChampionResult(QWidget):
     def set_pixmap(self, pixmap: QPixmap | None) -> None:
         self.icon.set_pixmap(pixmap)
 
+    def has_pixmap(self) -> bool:
+        return self.icon.has_pixmap()
+
 
 class SearchOverlay(QFrame):
     """Champion search, floated over the dashboard.
@@ -877,12 +883,15 @@ class SearchOverlay(QFrame):
     dismissed = Signal()
     art_wanted = Signal(str, int)
 
-    MAX_RESULTS = 6
+    VISIBLE_ROWS = 6      # how tall the list is; the rest is scrolled to
+    MAX_RESULTS = 250     # every champion fits, with room for the next ones
 
     def __init__(self, catalog, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.catalog = catalog
         self._rows: dict[int, ChampionResult] = {}
+        self._shown: list[int] = []
+        self._asked: set[int] = set()
         # Answers "do we already have this icon?". Rows are rebuilt on every
         # keystroke, and the loader only ever fetches a champion once, so a row
         # created for a second search would otherwise never be filled in.
@@ -918,9 +927,36 @@ class SearchOverlay(QFrame):
         layout.addWidget(self.field)
 
         self.results = QListWidget()
-        self.results.setFixedHeight(6 + self.MAX_RESULTS * ChampionResult.HEIGHT)
+        self.results.setFixedHeight(6 + self.VISIBLE_ROWS * ChampionResult.HEIGHT)
         self.results.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.results.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.results.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        # Pixel scrolling, so the wheel and the handle both move smoothly
+        # instead of jumping a whole champion at a time.
+        self.results.setVerticalScrollMode(QListWidget.ScrollMode.ScrollPerPixel)
+        self.results.verticalScrollBar().valueChanged.connect(self._on_scrolled)
+        # A scrollbar of its own, wider and in the accent colour: on a list of
+        # a hundred and seventy the app-wide one is a thread you cannot grab.
+        self.results.setStyleSheet(
+            f"""
+            QListWidget {{ background: transparent; border: none; }}
+            QScrollBar:vertical {{
+                background: {theme.SURFACE_SUNKEN};
+                width: 12px;
+                margin: 1px 0px;
+                border-radius: 6px;
+            }}
+            QScrollBar::handle:vertical {{
+                background: {theme.rgba(theme.ACCENT, 0.6)};
+                border-radius: 5px;
+                min-height: 46px;
+                margin: 1px;
+            }}
+            QScrollBar::handle:vertical:hover {{ background: {theme.ACCENT}; }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
+            QScrollBar::add-page:vertical,
+            QScrollBar::sub-page:vertical {{ background: transparent; }}
+            """
+        )
         self.results.itemClicked.connect(self._on_activated)
         self.results.itemActivated.connect(self._on_activated)
         layout.addWidget(self.results)
@@ -934,7 +970,7 @@ class SearchOverlay(QFrame):
     def open_for(self, heading: str) -> None:
         self.heading.setText(heading)
         self.field.clear()
-        self._populate(self.catalog.all[: self.MAX_RESULTS])
+        self._populate(self._default_list())
         self.show()
         self.raise_()
         self.field.setFocus(Qt.FocusReason.OtherFocusReason)
@@ -950,37 +986,70 @@ class SearchOverlay(QFrame):
 
     # -- searching --------------------------------------------------------
 
+    def _default_list(self):
+        """Nothing typed yet: the whole roster, alphabetically."""
+        return self.catalog.all[: self.MAX_RESULTS]
+
     def _on_typed(self, query: str) -> None:
         matches = (
             self.catalog.search(query, limit=self.MAX_RESULTS)
             if query.strip()
-            else self.catalog.all[: self.MAX_RESULTS]
+            else self._default_list()
         )
         self._populate(matches)
 
     def _populate(self, champions) -> None:
-        self.results.clear()
-        self._rows.clear()
-        for champion in champions:
-            item = QListWidgetItem()
-            item.setSizeHint(QSize(0, ChampionResult.HEIGHT))
-            item.setData(Qt.ItemDataRole.UserRole, champion.id)
-            item.setData(Qt.ItemDataRole.UserRole + 1, champion.name)
-            row = ChampionResult(champion)
-            self.results.addItem(item)
-            self.results.setItemWidget(item, row)
-            self._rows[champion.id] = row
-
-            cached = self.pixmap_for(champion.id)
-            if cached is not None:
-                row.set_pixmap(cached)
-            else:
-                self.art_wanted.emit("icon", champion.id)
+        # Typing `kata` after `kat` leaves the same Katarina on screen, and so
+        # does reopening the overlay. Keeping those rows is not just faster --
+        # it keeps the icons that already arrived in them.
+        listed = [champion.id for champion in champions]
+        if listed != self._shown:
+            self.results.clear()
+            self._rows.clear()
+            self._asked.clear()
+            self._shown = listed
+            for champion in champions:
+                item = QListWidgetItem()
+                item.setSizeHint(QSize(0, ChampionResult.HEIGHT))
+                item.setData(Qt.ItemDataRole.UserRole, champion.id)
+                item.setData(Qt.ItemDataRole.UserRole + 1, champion.name)
+                row = ChampionResult(champion)
+                self.results.addItem(item)
+                self.results.setItemWidget(item, row)
+                self._rows[champion.id] = row
         if champions:
             self.results.setCurrentRow(0)
+            self.results.scrollToTop()
+        self._fill_visible()
         self.hint.setText(
             "Type a name, then press Enter." if champions else "No champion by that name."
         )
+
+    def _on_scrolled(self, _value: int) -> None:
+        self._fill_visible()
+
+    def _fill_visible(self) -> None:
+        """Fill in the icons around the scroll position, and no others.
+
+        The whole roster is listed now, so asking for every icon at once would
+        put a hundred and seventy downloads in front of the six a person is
+        actually looking at.
+        """
+        count = self.results.count()
+        if not count:
+            return
+        first = max(0, self.results.indexAt(self.results.viewport().rect().topLeft()).row())
+        for index in range(first, min(count, first + 3 * self.VISIBLE_ROWS)):
+            champion_id = int(self.results.item(index).data(Qt.ItemDataRole.UserRole))
+            row = self._rows.get(champion_id)
+            if row is None or row.has_pixmap():
+                continue
+            cached = self.pixmap_for(champion_id)
+            if cached is not None:
+                row.set_pixmap(cached)
+            elif champion_id not in self._asked:
+                self._asked.add(champion_id)
+                self.art_wanted.emit("icon", champion_id)
 
     def set_pixmap(self, champion_id: int, pixmap: QPixmap) -> None:
         row = self._rows.get(champion_id)

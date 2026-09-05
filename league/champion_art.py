@@ -8,6 +8,7 @@ never fetched twice.
 
 from __future__ import annotations
 
+import json
 import os
 import urllib.error
 import urllib.request
@@ -30,9 +31,11 @@ CACHE_DIR = (
 LCU_ICON = "/lol-game-data/assets/v1/champion-icons/{champion_id}.png"
 LCU_DETAIL = "/lol-game-data/assets/v1/champions/{champion_id}.json"
 
-# Riot's public CDN, used when the client is not running.
+# Riot's public CDN, used when the client is not running. Icons live under a
+# patch folder, so the patch has to be a real one -- there is no `latest`.
 CDN_ICON = "https://ddragon.leagueoflegends.com/cdn/{version}/img/champion/{alias}.png"
 CDN_SPLASH = "https://ddragon.leagueoflegends.com/cdn/img/champion/splash/{alias}_0.jpg"
+CDN_VERSIONS = "https://ddragon.leagueoflegends.com/api/versions.json"
 
 TIMEOUT = 12.0
 MAX_BYTES = 4 * 1024 * 1024
@@ -88,20 +91,48 @@ def _from_client(kind: str, champion_id: int, client) -> bytes | None:
         return None
 
 
-def _from_cdn(kind: str, alias: str, version: str) -> bytes | None:
-    if not alias:
-        return None
-    url = (
-        CDN_ICON.format(version=version or "latest", alias=alias)
-        if kind == ICON
-        else CDN_SPLASH.format(alias=alias)
-    )
+_newest_version = ""
+
+
+def newest_version() -> str:
+    """The current patch, asked of the CDN once per run."""
+    global _newest_version
+    if _newest_version:
+        return _newest_version
+    body = _fetch(CDN_VERSIONS)
+    try:
+        versions = json.loads(body or b"")
+    except ValueError:
+        return ""
+    if isinstance(versions, list) and versions and isinstance(versions[0], str):
+        _newest_version = versions[0]
+    return _newest_version
+
+
+def _fetch(url: str) -> bytes | None:
     request = urllib.request.Request(url, headers={"User-Agent": "NeekoDraftAssistant"})
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
             return response.read(MAX_BYTES) or None
     except (urllib.error.URLError, OSError, ValueError):
         return None
+
+
+def _from_cdn(kind: str, alias: str, version: str) -> bytes | None:
+    if not alias:
+        return None
+    if kind != ICON:
+        return _fetch(CDN_SPLASH.format(alias=alias))
+    # The bundled patch first -- it is right for months at a time and costs no
+    # extra request. Only when it is missing or too old is the CDN asked what
+    # the current one is.
+    for candidate in (version, newest_version()):
+        if not candidate:
+            continue
+        data = _fetch(CDN_ICON.format(version=candidate, alias=alias))
+        if data:
+            return data
+    return None
 
 
 def load(kind: str, champion_id: int, alias: str = "", version: str = "", client=None) -> bytes | None:

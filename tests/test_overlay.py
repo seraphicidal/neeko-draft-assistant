@@ -4,6 +4,10 @@ Its rows are thrown away and rebuilt on every keystroke, while the art loader
 fetches each champion only once. That combination is what made icons vanish
 from the list the second time a champion was searched for, so the cache lookup
 is pinned down here.
+
+The list holds the whole roster now and is scrolled through, which is the
+other half of it: the icons have to follow the scroll position rather than
+being asked for a hundred and seventy at a time.
 """
 
 import os
@@ -107,12 +111,92 @@ class SearchOverlayTest(unittest.TestCase):
         self.assertEqual(self.overlay.results.count(), 0)
         self.assertIn("No champion", self.overlay.hint.text())
 
+    def test_the_same_search_twice_keeps_the_rows_it_had(self):
+        # Rebuilding identical rows would throw away icons that had arrived.
+        self.overlay._on_typed("nee")
+        row = self.overlay._rows[NEEKO]
+        self.overlay.set_pixmap(NEEKO, self.a_pixmap())
+
+        self.overlay._on_typed("neek")
+
+        self.assertIs(self.overlay._rows[NEEKO], row)
+        self.assertTrue(row.has_pixmap())
+
     def test_champions_carry_no_title(self):
         # Titles like "the Sinister Blade" were taken out of the interface, and
         # out of the model with it so nothing keeps fetching them.
         from dataclasses import fields
 
         self.assertNotIn("title", [entry.name for entry in fields(Champion)])
+
+
+@unittest.skipUnless(QT_AVAILABLE, "PySide6 is not installed")
+class ScrollingTest(unittest.TestCase):
+    """The whole roster is listed; only what is in view is fetched."""
+
+    ROSTER = 60
+
+    @classmethod
+    def setUpClass(cls):
+        cls.app = QApplication.instance() or QApplication([])
+
+    def setUp(self):
+        self.catalog = Catalog(
+            [Champion(100 + index, f"Champion {index:02d}", f"C{index:02d}")
+             for index in range(self.ROSTER)]
+        )
+        self.overlay = SearchOverlay(self.catalog)
+        self.overlay.resize(420, 360)
+        self.overlay.show()
+        self.requested: list[int] = []
+        self.overlay.art_wanted.connect(
+            lambda _kind, champion_id: self.requested.append(champion_id)
+        )
+
+    def tearDown(self):
+        self.overlay.hide()
+
+    def test_the_whole_roster_is_listed(self):
+        self.overlay.open_for("Choose your champion")
+
+        self.assertEqual(self.overlay.results.count(), self.ROSTER)
+
+    def test_the_list_can_be_scrolled(self):
+        self.overlay.open_for("Choose your champion")
+        self.app.processEvents()
+
+        bar = self.overlay.results.verticalScrollBar()
+
+        self.assertGreater(bar.maximum(), 0, "the roster fits on screen, so nothing scrolls")
+        self.assertTrue(bar.isVisibleTo(self.overlay))
+
+    def test_only_the_icons_near_the_top_are_asked_for(self):
+        self.overlay.open_for("Choose your champion")
+
+        self.assertLess(len(self.requested), self.ROSTER)
+        self.assertIn(self.catalog.all[0].id, self.requested)
+        self.assertNotIn(self.catalog.all[-1].id, self.requested)
+
+    def test_scrolling_asks_for_the_icons_that_come_into_view(self):
+        self.overlay.open_for("Choose your champion")
+        self.app.processEvents()
+        first_batch = list(self.requested)
+
+        bar = self.overlay.results.verticalScrollBar()
+        bar.setValue(bar.maximum())
+        self.app.processEvents()
+
+        self.assertGreater(len(self.requested), len(first_batch))
+        self.assertIn(self.catalog.all[-1].id, self.requested)
+
+    def test_an_icon_is_never_asked_for_twice(self):
+        self.overlay.open_for("Choose your champion")
+        bar = self.overlay.results.verticalScrollBar()
+        for value in (bar.maximum() // 2, 0, bar.maximum(), 0):
+            bar.setValue(value)
+            self.app.processEvents()
+
+        self.assertEqual(len(self.requested), len(set(self.requested)))
 
 
 if __name__ == "__main__":

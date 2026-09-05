@@ -30,6 +30,7 @@ class SettingsTest(unittest.TestCase):
         settings.chat_enabled = True
         settings.chat_message = "hello gl hf"
         settings.accept_delay = 2.5
+        settings.sound_file = r"C:\Users\miska\cue.mp3"
         settings.launch_minimized = True
         settings.accepted_total = 12
         settings.save(self.path)
@@ -43,6 +44,7 @@ class SettingsTest(unittest.TestCase):
         self.assertTrue(reloaded.chat_enabled)
         self.assertEqual(reloaded.chat_message, "hello gl hf")
         self.assertEqual(reloaded.accept_delay, 2.5)
+        self.assertEqual(reloaded.sound_file, r"C:\Users\miska\cue.mp3")
         self.assertTrue(reloaded.launch_minimized)
         self.assertEqual(reloaded.accepted_total, 12)
 
