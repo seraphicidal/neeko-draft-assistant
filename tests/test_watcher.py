@@ -130,6 +130,22 @@ class QueueTest(WatcherTestCase):
         self.assertIn("counters", self.kinds())
         self.assertEqual(interval, INTERVAL_QUEUE)
 
+    def test_only_the_accept_asks_for_a_desktop_notification(self):
+        client = FakeLcu(
+            {
+                gameflow.ENDPOINT: (200, "ReadyCheck"),
+                mm.READY_CHECK: (200, ready_check_payload()),
+                ("POST", mm.ACCEPT): (204, None),
+            }
+        )
+        watcher, _ = self.build(client)
+        step(watcher)
+
+        step(watcher)
+
+        actions = [payload for kind, payload in self.events if kind == "action"]
+        self.assertTrue(actions[0]["notify"], "you are away from the screen for this one")
+
     def test_a_refused_accept_is_retried_but_not_forever(self):
         client = FakeLcu(
             {
@@ -196,6 +212,28 @@ class DraftTest(WatcherTestCase):
             step(watcher)
 
         self.assertEqual(client.count("PATCH", "/actions/5"), 1)
+
+    def test_draft_actions_stay_out_of_the_notification_area(self):
+        # Hovering, locking and chatting all happen while champion select is on
+        # screen; a Windows toast on top of it would only be in the way.
+        client = self.draft_client([[action(5, cell=2, in_progress=True)]])
+        watcher, _ = self.build(
+            client,
+            preferred_champion_id=NEEKO,
+            auto_pick=True,
+            chat_enabled=True,
+            chat_message="hello gl hf",
+        )
+        step(watcher)
+
+        for _ in range(4):
+            step(watcher)
+
+        actions = [payload for kind, payload in self.events if kind == "action"]
+        self.assertTrue(actions, "the draft should have produced some actions")
+        for payload in actions:
+            with self.subTest(action=payload["text"]):
+                self.assertFalse(payload.get("notify"))
 
     def test_sends_the_draft_message_once(self):
         client = self.draft_client([[action(5, cell=2)]])

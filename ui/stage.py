@@ -143,11 +143,7 @@ class DraftScene(QWidget):
         self.turn.setStyleSheet(theme.font_css("title", status.tone))
 
         champion_id = view.declared_champion or context.preferred_id
-        self.hero.set_champion(
-            context.name_of(champion_id),
-            context.title_of(champion_id),
-            status.tone,
-        )
+        self.hero.set_champion(context.name_of(champion_id), status.tone)
         self.hero.set_icon(context.champion_icon(champion_id))
         self.hero.set_splash(context.champion_splash(champion_id))
 

@@ -4,1040 +4,867 @@
   {
    "id": 266,
    "name": "Aatrox",
-   "alias": "Aatrox",
-   "title": "the Darkin Blade"
+   "alias": "Aatrox"
   },
   {
    "id": 103,
    "name": "Ahri",
-   "alias": "Ahri",
-   "title": "the Nine-Tailed Fox"
+   "alias": "Ahri"
   },
   {
    "id": 84,
    "name": "Akali",
-   "alias": "Akali",
-   "title": "the Rogue Assassin"
+   "alias": "Akali"
   },
   {
    "id": 166,
    "name": "Akshan",
-   "alias": "Akshan",
-   "title": "the Rogue Sentinel"
+   "alias": "Akshan"
   },
   {
    "id": 12,
    "name": "Alistar",
-   "alias": "Alistar",
-   "title": "the Minotaur"
+   "alias": "Alistar"
   },
   {
    "id": 799,
    "name": "Ambessa",
-   "alias": "Ambessa",
-   "title": "Matriarch of War"
+   "alias": "Ambessa"
   },
   {
    "id": 32,
    "name": "Amumu",
-   "alias": "Amumu",
-   "title": "the Sad Mummy"
+   "alias": "Amumu"
   },
   {
    "id": 34,
    "name": "Anivia",
-   "alias": "Anivia",
-   "title": "the Cryophoenix"
+   "alias": "Anivia"
   },
   {
    "id": 1,
    "name": "Annie",
-   "alias": "Annie",
-   "title": "the Dark Child"
+   "alias": "Annie"
   },
   {
    "id": 523,
    "name": "Aphelios",
-   "alias": "Aphelios",
-   "title": "the Weapon of the Faithful"
+   "alias": "Aphelios"
   },
   {
    "id": 22,
    "name": "Ashe",
-   "alias": "Ashe",
-   "title": "the Frost Archer"
+   "alias": "Ashe"
   },
   {
    "id": 136,
    "name": "Aurelion Sol",
-   "alias": "AurelionSol",
-   "title": "The Star Forger"
+   "alias": "AurelionSol"
   },
   {
    "id": 893,
    "name": "Aurora",
-   "alias": "Aurora",
-   "title": "the Witch Between Worlds"
+   "alias": "Aurora"
   },
   {
    "id": 268,
    "name": "Azir",
-   "alias": "Azir",
-   "title": "the Emperor of the Sands"
+   "alias": "Azir"
   },
   {
    "id": 432,
    "name": "Bard",
-   "alias": "Bard",
-   "title": "the Wandering Caretaker"
+   "alias": "Bard"
   },
   {
    "id": 200,
    "name": "Bel'Veth",
-   "alias": "Belveth",
-   "title": "the Empress of the Void"
+   "alias": "Belveth"
   },
   {
    "id": 53,
    "name": "Blitzcrank",
-   "alias": "Blitzcrank",
-   "title": "the Great Steam Golem"
+   "alias": "Blitzcrank"
   },
   {
    "id": 63,
    "name": "Brand",
-   "alias": "Brand",
-   "title": "the Burning Vengeance"
+   "alias": "Brand"
   },
   {
    "id": 201,
    "name": "Braum",
-   "alias": "Braum",
-   "title": "the Heart of the Freljord"
+   "alias": "Braum"
   },
   {
    "id": 233,
    "name": "Briar",
-   "alias": "Briar",
-   "title": "the Restrained Hunger"
+   "alias": "Briar"
   },
   {
    "id": 51,
    "name": "Caitlyn",
-   "alias": "Caitlyn",
-   "title": "the Sheriff of Piltover"
+   "alias": "Caitlyn"
   },
   {
    "id": 164,
    "name": "Camille",
-   "alias": "Camille",
-   "title": "the Steel Shadow"
+   "alias": "Camille"
   },
   {
    "id": 69,
    "name": "Cassiopeia",
-   "alias": "Cassiopeia",
-   "title": "the Serpent's Embrace"
+   "alias": "Cassiopeia"
   },
   {
    "id": 31,
    "name": "Cho'Gath",
-   "alias": "Chogath",
-   "title": "the Terror of the Void"
+   "alias": "Chogath"
   },
   {
    "id": 42,
    "name": "Corki",
-   "alias": "Corki",
-   "title": "the Daring Bombardier"
+   "alias": "Corki"
   },
   {
    "id": 122,
    "name": "Darius",
-   "alias": "Darius",
-   "title": "the Hand of Noxus"
+   "alias": "Darius"
   },
   {
    "id": 131,
    "name": "Diana",
-   "alias": "Diana",
-   "title": "Scorn of the Moon"
+   "alias": "Diana"
   },
   {
    "id": 36,
    "name": "Dr. Mundo",
-   "alias": "DrMundo",
-   "title": "the Madman of Zaun"
+   "alias": "DrMundo"
   },
   {
    "id": 119,
    "name": "Draven",
-   "alias": "Draven",
-   "title": "the Glorious Executioner"
+   "alias": "Draven"
   },
   {
    "id": 245,
    "name": "Ekko",
-   "alias": "Ekko",
-   "title": "the Boy Who Shattered Time"
+   "alias": "Ekko"
   },
   {
    "id": 60,
    "name": "Elise",
-   "alias": "Elise",
-   "title": "the Spider Queen"
+   "alias": "Elise"
   },
   {
    "id": 28,
    "name": "Evelynn",
-   "alias": "Evelynn",
-   "title": "Agony's Embrace"
+   "alias": "Evelynn"
   },
   {
    "id": 81,
    "name": "Ezreal",
-   "alias": "Ezreal",
-   "title": "the Prodigal Explorer"
+   "alias": "Ezreal"
   },
   {
    "id": 9,
    "name": "Fiddlesticks",
-   "alias": "Fiddlesticks",
-   "title": "the Ancient Fear"
+   "alias": "Fiddlesticks"
   },
   {
    "id": 114,
    "name": "Fiora",
-   "alias": "Fiora",
-   "title": "the Grand Duelist"
+   "alias": "Fiora"
   },
   {
    "id": 105,
    "name": "Fizz",
-   "alias": "Fizz",
-   "title": "the Tidal Trickster"
+   "alias": "Fizz"
   },
   {
    "id": 3,
    "name": "Galio",
-   "alias": "Galio",
-   "title": "the Colossus"
+   "alias": "Galio"
   },
   {
    "id": 41,
    "name": "Gangplank",
-   "alias": "Gangplank",
-   "title": "the Saltwater Scourge"
+   "alias": "Gangplank"
   },
   {
    "id": 86,
    "name": "Garen",
-   "alias": "Garen",
-   "title": "The Might of Demacia"
+   "alias": "Garen"
   },
   {
    "id": 150,
    "name": "Gnar",
-   "alias": "Gnar",
-   "title": "the Missing Link"
+   "alias": "Gnar"
   },
   {
    "id": 79,
    "name": "Gragas",
-   "alias": "Gragas",
-   "title": "the Rabble Rouser"
+   "alias": "Gragas"
   },
   {
    "id": 104,
    "name": "Graves",
-   "alias": "Graves",
-   "title": "the Outlaw"
+   "alias": "Graves"
   },
   {
    "id": 887,
    "name": "Gwen",
-   "alias": "Gwen",
-   "title": "The Hallowed Seamstress"
+   "alias": "Gwen"
   },
   {
    "id": 120,
    "name": "Hecarim",
-   "alias": "Hecarim",
-   "title": "the Shadow of War"
+   "alias": "Hecarim"
   },
   {
    "id": 74,
    "name": "Heimerdinger",
-   "alias": "Heimerdinger",
-   "title": "the Revered Inventor"
+   "alias": "Heimerdinger"
   },
   {
    "id": 910,
    "name": "Hwei",
-   "alias": "Hwei",
-   "title": "the Visionary"
+   "alias": "Hwei"
   },
   {
    "id": 420,
    "name": "Illaoi",
-   "alias": "Illaoi",
-   "title": "the Kraken Priestess"
+   "alias": "Illaoi"
   },
   {
    "id": 39,
    "name": "Irelia",
-   "alias": "Irelia",
-   "title": "the Blade Dancer"
+   "alias": "Irelia"
   },
   {
    "id": 427,
    "name": "Ivern",
-   "alias": "Ivern",
-   "title": "the Green Father"
+   "alias": "Ivern"
   },
   {
    "id": 40,
    "name": "Janna",
-   "alias": "Janna",
-   "title": "the Storm's Fury"
+   "alias": "Janna"
   },
   {
    "id": 59,
    "name": "Jarvan IV",
-   "alias": "JarvanIV",
-   "title": "the Exemplar of Demacia"
+   "alias": "JarvanIV"
   },
   {
    "id": 24,
    "name": "Jax",
-   "alias": "Jax",
-   "title": "Grandmaster at Arms"
+   "alias": "Jax"
   },
   {
    "id": 126,
    "name": "Jayce",
-   "alias": "Jayce",
-   "title": "the Defender of Tomorrow"
+   "alias": "Jayce"
   },
   {
    "id": 202,
    "name": "Jhin",
-   "alias": "Jhin",
-   "title": "the Virtuoso"
+   "alias": "Jhin"
   },
   {
    "id": 222,
    "name": "Jinx",
-   "alias": "Jinx",
-   "title": "the Loose Cannon"
+   "alias": "Jinx"
   },
   {
    "id": 897,
    "name": "K'Sante",
-   "alias": "KSante",
-   "title": "the Pride of Nazumah"
+   "alias": "KSante"
   },
   {
    "id": 145,
    "name": "Kai'Sa",
-   "alias": "Kaisa",
-   "title": "Daughter of the Void"
+   "alias": "Kaisa"
   },
   {
    "id": 429,
    "name": "Kalista",
-   "alias": "Kalista",
-   "title": "the Spear of Vengeance"
+   "alias": "Kalista"
   },
   {
    "id": 43,
    "name": "Karma",
-   "alias": "Karma",
-   "title": "the Enlightened One"
+   "alias": "Karma"
   },
   {
    "id": 30,
    "name": "Karthus",
-   "alias": "Karthus",
-   "title": "the Deathsinger"
+   "alias": "Karthus"
   },
   {
    "id": 38,
    "name": "Kassadin",
-   "alias": "Kassadin",
-   "title": "the Void Walker"
+   "alias": "Kassadin"
   },
   {
    "id": 55,
    "name": "Katarina",
-   "alias": "Katarina",
-   "title": "the Sinister Blade"
+   "alias": "Katarina"
   },
   {
    "id": 10,
    "name": "Kayle",
-   "alias": "Kayle",
-   "title": "the Righteous"
+   "alias": "Kayle"
   },
   {
    "id": 141,
    "name": "Kayn",
-   "alias": "Kayn",
-   "title": "the Shadow Reaper"
+   "alias": "Kayn"
   },
   {
    "id": 85,
    "name": "Kennen",
-   "alias": "Kennen",
-   "title": "the Heart of the Tempest"
+   "alias": "Kennen"
   },
   {
    "id": 121,
    "name": "Kha'Zix",
-   "alias": "Khazix",
-   "title": "the Voidreaver"
+   "alias": "Khazix"
   },
   {
    "id": 203,
    "name": "Kindred",
-   "alias": "Kindred",
-   "title": "The Eternal Hunters"
+   "alias": "Kindred"
   },
   {
    "id": 240,
    "name": "Kled",
-   "alias": "Kled",
-   "title": "the Cantankerous Cavalier"
+   "alias": "Kled"
   },
   {
    "id": 96,
    "name": "Kog'Maw",
-   "alias": "KogMaw",
-   "title": "the Mouth of the Abyss"
+   "alias": "KogMaw"
   },
   {
    "id": 7,
    "name": "LeBlanc",
-   "alias": "Leblanc",
-   "title": "the Deceiver"
+   "alias": "Leblanc"
   },
   {
    "id": 64,
    "name": "Lee Sin",
-   "alias": "LeeSin",
-   "title": "the Blind Monk"
+   "alias": "LeeSin"
   },
   {
    "id": 89,
    "name": "Leona",
-   "alias": "Leona",
-   "title": "the Radiant Dawn"
+   "alias": "Leona"
   },
   {
    "id": 876,
    "name": "Lillia",
-   "alias": "Lillia",
-   "title": "the Bashful Bloom"
+   "alias": "Lillia"
   },
   {
    "id": 127,
    "name": "Lissandra",
-   "alias": "Lissandra",
-   "title": "the Ice Witch"
+   "alias": "Lissandra"
   },
   {
    "id": 805,
    "name": "Locke",
-   "alias": "Locke",
-   "title": "the Ashen Exorcist"
+   "alias": "Locke"
   },
   {
    "id": 236,
    "name": "Lucian",
-   "alias": "Lucian",
-   "title": "the Purifier"
+   "alias": "Lucian"
   },
   {
    "id": 117,
    "name": "Lulu",
-   "alias": "Lulu",
-   "title": "the Fae Sorceress"
+   "alias": "Lulu"
   },
   {
    "id": 99,
    "name": "Lux",
-   "alias": "Lux",
-   "title": "the Lady of Luminosity"
+   "alias": "Lux"
   },
   {
    "id": 54,
    "name": "Malphite",
-   "alias": "Malphite",
-   "title": "Shard of the Monolith"
+   "alias": "Malphite"
   },
   {
    "id": 90,
    "name": "Malzahar",
-   "alias": "Malzahar",
-   "title": "the Prophet of the Void"
+   "alias": "Malzahar"
   },
   {
    "id": 57,
    "name": "Maokai",
-   "alias": "Maokai",
-   "title": "the Twisted Treant"
+   "alias": "Maokai"
   },
   {
    "id": 11,
    "name": "Master Yi",
-   "alias": "MasterYi",
-   "title": "the Wuju Bladesman"
+   "alias": "MasterYi"
   },
   {
    "id": 800,
    "name": "Mel",
-   "alias": "Mel",
-   "title": "the Soul's Reflection"
+   "alias": "Mel"
   },
   {
    "id": 902,
    "name": "Milio",
-   "alias": "Milio",
-   "title": "The Gentle Flame"
+   "alias": "Milio"
   },
   {
    "id": 21,
    "name": "Miss Fortune",
-   "alias": "MissFortune",
-   "title": "the Bounty Hunter"
+   "alias": "MissFortune"
   },
   {
    "id": 82,
    "name": "Mordekaiser",
-   "alias": "Mordekaiser",
-   "title": "the Iron Revenant"
+   "alias": "Mordekaiser"
   },
   {
    "id": 25,
    "name": "Morgana",
-   "alias": "Morgana",
-   "title": "the Fallen"
+   "alias": "Morgana"
   },
   {
    "id": 950,
    "name": "Naafiri",
-   "alias": "Naafiri",
-   "title": "the Hound of a Hundred Bites"
+   "alias": "Naafiri"
   },
   {
    "id": 267,
    "name": "Nami",
-   "alias": "Nami",
-   "title": "the Tidecaller"
+   "alias": "Nami"
   },
   {
    "id": 75,
    "name": "Nasus",
-   "alias": "Nasus",
-   "title": "the Curator of the Sands"
+   "alias": "Nasus"
   },
   {
    "id": 111,
    "name": "Nautilus",
-   "alias": "Nautilus",
-   "title": "the Titan of the Depths"
+   "alias": "Nautilus"
   },
   {
    "id": 518,
    "name": "Neeko",
-   "alias": "Neeko",
-   "title": "the Curious Chameleon"
+   "alias": "Neeko"
   },
   {
    "id": 76,
    "name": "Nidalee",
-   "alias": "Nidalee",
-   "title": "the Bestial Huntress"
+   "alias": "Nidalee"
   },
   {
    "id": 895,
    "name": "Nilah",
-   "alias": "Nilah",
-   "title": "the Joy Unbound"
+   "alias": "Nilah"
   },
   {
    "id": 56,
    "name": "Nocturne",
-   "alias": "Nocturne",
-   "title": "the Eternal Nightmare"
+   "alias": "Nocturne"
   },
   {
    "id": 20,
    "name": "Nunu & Willump",
-   "alias": "Nunu",
-   "title": "the Boy and His Yeti"
+   "alias": "Nunu"
   },
   {
    "id": 2,
    "name": "Olaf",
-   "alias": "Olaf",
-   "title": "the Berserker"
+   "alias": "Olaf"
   },
   {
    "id": 61,
    "name": "Orianna",
-   "alias": "Orianna",
-   "title": "the Lady of Clockwork"
+   "alias": "Orianna"
   },
   {
    "id": 516,
    "name": "Ornn",
-   "alias": "Ornn",
-   "title": "The Fire below the Mountain"
+   "alias": "Ornn"
   },
   {
    "id": 80,
    "name": "Pantheon",
-   "alias": "Pantheon",
-   "title": "the Unbreakable Spear"
+   "alias": "Pantheon"
   },
   {
    "id": 78,
    "name": "Poppy",
-   "alias": "Poppy",
-   "title": "Keeper of the Hammer"
+   "alias": "Poppy"
   },
   {
    "id": 555,
    "name": "Pyke",
-   "alias": "Pyke",
-   "title": "the Bloodharbor Ripper"
+   "alias": "Pyke"
   },
   {
    "id": 246,
    "name": "Qiyana",
-   "alias": "Qiyana",
-   "title": "Empress of the Elements"
+   "alias": "Qiyana"
   },
   {
    "id": 133,
    "name": "Quinn",
-   "alias": "Quinn",
-   "title": "Demacia's Wings"
+   "alias": "Quinn"
   },
   {
    "id": 497,
    "name": "Rakan",
-   "alias": "Rakan",
-   "title": "The Charmer"
+   "alias": "Rakan"
   },
   {
    "id": 33,
    "name": "Rammus",
-   "alias": "Rammus",
-   "title": "the Armordillo"
+   "alias": "Rammus"
   },
   {
    "id": 421,
    "name": "Rek'Sai",
-   "alias": "RekSai",
-   "title": "the Void Burrower"
+   "alias": "RekSai"
   },
   {
    "id": 526,
    "name": "Rell",
-   "alias": "Rell",
-   "title": "the Iron Maiden"
+   "alias": "Rell"
   },
   {
    "id": 888,
    "name": "Renata Glasc",
-   "alias": "Renata",
-   "title": "the Chem-Baroness"
+   "alias": "Renata"
   },
   {
    "id": 58,
    "name": "Renekton",
-   "alias": "Renekton",
-   "title": "the Butcher of the Sands"
+   "alias": "Renekton"
   },
   {
    "id": 107,
    "name": "Rengar",
-   "alias": "Rengar",
-   "title": "the Pridestalker"
+   "alias": "Rengar"
   },
   {
    "id": 92,
    "name": "Riven",
-   "alias": "Riven",
-   "title": "the Exile"
+   "alias": "Riven"
   },
   {
    "id": 68,
    "name": "Rumble",
-   "alias": "Rumble",
-   "title": "the Mechanized Menace"
+   "alias": "Rumble"
   },
   {
    "id": 13,
    "name": "Ryze",
-   "alias": "Ryze",
-   "title": "the Rune Mage"
+   "alias": "Ryze"
   },
   {
    "id": 360,
    "name": "Samira",
-   "alias": "Samira",
-   "title": "the Desert Rose"
+   "alias": "Samira"
   },
   {
    "id": 113,
    "name": "Sejuani",
-   "alias": "Sejuani",
-   "title": "Fury of the North"
+   "alias": "Sejuani"
   },
   {
    "id": 235,
    "name": "Senna",
-   "alias": "Senna",
-   "title": "the Redeemer"
+   "alias": "Senna"
   },
   {
    "id": 147,
    "name": "Seraphine",
-   "alias": "Seraphine",
-   "title": "the Starry-Eyed Songstress"
+   "alias": "Seraphine"
   },
   {
    "id": 875,
    "name": "Sett",
-   "alias": "Sett",
-   "title": "the Boss"
+   "alias": "Sett"
   },
   {
    "id": 35,
    "name": "Shaco",
-   "alias": "Shaco",
-   "title": "the Demon Jester"
+   "alias": "Shaco"
   },
   {
    "id": 98,
    "name": "Shen",
-   "alias": "Shen",
-   "title": "the Eye of Twilight"
+   "alias": "Shen"
   },
   {
    "id": 102,
    "name": "Shyvana",
-   "alias": "Shyvana",
-   "title": "the Half-Dragon"
+   "alias": "Shyvana"
   },
   {
    "id": 27,
    "name": "Singed",
-   "alias": "Singed",
-   "title": "the Mad Chemist"
+   "alias": "Singed"
   },
   {
    "id": 14,
    "name": "Sion",
-   "alias": "Sion",
-   "title": "The Undead Juggernaut"
+   "alias": "Sion"
   },
   {
    "id": 15,
    "name": "Sivir",
-   "alias": "Sivir",
-   "title": "the Battle Mistress"
+   "alias": "Sivir"
   },
   {
    "id": 72,
    "name": "Skarner",
-   "alias": "Skarner",
-   "title": "the Primordial Sovereign"
+   "alias": "Skarner"
   },
   {
    "id": 901,
    "name": "Smolder",
-   "alias": "Smolder",
-   "title": "the Fiery Fledgling"
+   "alias": "Smolder"
   },
   {
    "id": 37,
    "name": "Sona",
-   "alias": "Sona",
-   "title": "Maven of the Strings"
+   "alias": "Sona"
   },
   {
    "id": 16,
    "name": "Soraka",
-   "alias": "Soraka",
-   "title": "the Starchild"
+   "alias": "Soraka"
   },
   {
    "id": 50,
    "name": "Swain",
-   "alias": "Swain",
-   "title": "the Noxian Grand General"
+   "alias": "Swain"
   },
   {
    "id": 517,
    "name": "Sylas",
-   "alias": "Sylas",
-   "title": "the Unshackled"
+   "alias": "Sylas"
   },
   {
    "id": 134,
    "name": "Syndra",
-   "alias": "Syndra",
-   "title": "the Dark Sovereign"
+   "alias": "Syndra"
   },
   {
    "id": 223,
    "name": "Tahm Kench",
-   "alias": "TahmKench",
-   "title": "The River King"
+   "alias": "TahmKench"
   },
   {
    "id": 163,
    "name": "Taliyah",
-   "alias": "Taliyah",
-   "title": "the Stoneweaver"
+   "alias": "Taliyah"
   },
   {
    "id": 91,
    "name": "Talon",
-   "alias": "Talon",
-   "title": "the Blade's Shadow"
+   "alias": "Talon"
   },
   {
    "id": 44,
    "name": "Taric",
-   "alias": "Taric",
-   "title": "the Shield of Valoran"
+   "alias": "Taric"
   },
   {
    "id": 17,
    "name": "Teemo",
-   "alias": "Teemo",
-   "title": "the Swift Scout"
+   "alias": "Teemo"
   },
   {
    "id": 412,
    "name": "Thresh",
-   "alias": "Thresh",
-   "title": "the Chain Warden"
+   "alias": "Thresh"
   },
   {
    "id": 18,
    "name": "Tristana",
-   "alias": "Tristana",
-   "title": "the Yordle Gunner"
+   "alias": "Tristana"
   },
   {
    "id": 48,
    "name": "Trundle",
-   "alias": "Trundle",
-   "title": "the Troll King"
+   "alias": "Trundle"
   },
   {
    "id": 23,
    "name": "Tryndamere",
-   "alias": "Tryndamere",
-   "title": "the Barbarian King"
+   "alias": "Tryndamere"
   },
   {
    "id": 4,
    "name": "Twisted Fate",
-   "alias": "TwistedFate",
-   "title": "the Card Master"
+   "alias": "TwistedFate"
   },
   {
    "id": 29,
    "name": "Twitch",
-   "alias": "Twitch",
-   "title": "the Plague Rat"
+   "alias": "Twitch"
   },
   {
    "id": 77,
    "name": "Udyr",
-   "alias": "Udyr",
-   "title": "the Spirit Walker"
+   "alias": "Udyr"
   },
   {
    "id": 6,
    "name": "Urgot",
-   "alias": "Urgot",
-   "title": "the Dreadnought"
+   "alias": "Urgot"
   },
   {
    "id": 110,
    "name": "Varus",
-   "alias": "Varus",
-   "title": "the Arrow of Retribution"
+   "alias": "Varus"
   },
   {
    "id": 67,
    "name": "Vayne",
-   "alias": "Vayne",
-   "title": "the Night Hunter"
+   "alias": "Vayne"
   },
   {
    "id": 45,
    "name": "Veigar",
-   "alias": "Veigar",
-   "title": "the Tiny Master of Evil"
+   "alias": "Veigar"
   },
   {
    "id": 161,
    "name": "Vel'Koz",
-   "alias": "Velkoz",
-   "title": "the Eye of the Void"
+   "alias": "Velkoz"
   },
   {
    "id": 711,
    "name": "Vex",
-   "alias": "Vex",
-   "title": "the Gloomist"
+   "alias": "Vex"
   },
   {
    "id": 254,
    "name": "Vi",
-   "alias": "Vi",
-   "title": "the Piltover Enforcer"
+   "alias": "Vi"
   },
   {
    "id": 234,
    "name": "Viego",
-   "alias": "Viego",
-   "title": "The Ruined King"
+   "alias": "Viego"
   },
   {
    "id": 112,
    "name": "Viktor",
-   "alias": "Viktor",
-   "title": "the Herald of the Arcane"
+   "alias": "Viktor"
   },
   {
    "id": 8,
    "name": "Vladimir",
-   "alias": "Vladimir",
-   "title": "the Crimson Reaper"
+   "alias": "Vladimir"
   },
   {
    "id": 106,
    "name": "Volibear",
-   "alias": "Volibear",
-   "title": "the Relentless Storm"
+   "alias": "Volibear"
   },
   {
    "id": 19,
    "name": "Warwick",
-   "alias": "Warwick",
-   "title": "the Uncaged Wrath of Zaun"
+   "alias": "Warwick"
   },
   {
    "id": 62,
    "name": "Wukong",
-   "alias": "MonkeyKing",
-   "title": "the Monkey King"
+   "alias": "MonkeyKing"
   },
   {
    "id": 498,
    "name": "Xayah",
-   "alias": "Xayah",
-   "title": "the Rebel"
+   "alias": "Xayah"
   },
   {
    "id": 101,
    "name": "Xerath",
-   "alias": "Xerath",
-   "title": "the Magus Ascendant"
+   "alias": "Xerath"
   },
   {
    "id": 5,
    "name": "Xin Zhao",
-   "alias": "XinZhao",
-   "title": "the Seneschal of Demacia"
+   "alias": "XinZhao"
   },
   {
    "id": 157,
    "name": "Yasuo",
-   "alias": "Yasuo",
-   "title": "the Unforgiven"
+   "alias": "Yasuo"
   },
   {
    "id": 777,
    "name": "Yone",
-   "alias": "Yone",
-   "title": "the Unforgotten"
+   "alias": "Yone"
   },
   {
    "id": 83,
    "name": "Yorick",
-   "alias": "Yorick",
-   "title": "Shepherd of Souls"
+   "alias": "Yorick"
   },
   {
    "id": 804,
    "name": "Yunara",
-   "alias": "Yunara",
-   "title": "the Unbroken Faith"
+   "alias": "Yunara"
   },
   {
    "id": 350,
    "name": "Yuumi",
-   "alias": "Yuumi",
-   "title": "the Magical Cat"
+   "alias": "Yuumi"
   },
   {
    "id": 904,
    "name": "Zaahen",
-   "alias": "Zaahen",
-   "title": "The Unsundered"
+   "alias": "Zaahen"
   },
   {
    "id": 154,
    "name": "Zac",
-   "alias": "Zac",
-   "title": "the Secret Weapon"
+   "alias": "Zac"
   },
   {
    "id": 238,
    "name": "Zed",
-   "alias": "Zed",
-   "title": "the Master of Shadows"
+   "alias": "Zed"
   },
   {
    "id": 221,
    "name": "Zeri",
-   "alias": "Zeri",
-   "title": "The Spark of Zaun"
+   "alias": "Zeri"
   },
   {
    "id": 115,
    "name": "Ziggs",
-   "alias": "Ziggs",
-   "title": "the Hexplosives Expert"
+   "alias": "Ziggs"
   },
   {
    "id": 26,
    "name": "Zilean",
-   "alias": "Zilean",
-   "title": "the Chronokeeper"
+   "alias": "Zilean"
   },
   {
    "id": 142,
    "name": "Zoe",
-   "alias": "Zoe",
-   "title": "the Aspect of Twilight"
+   "alias": "Zoe"
   },
   {
    "id": 143,
    "name": "Zyra",
-   "alias": "Zyra",
-   "title": "Rise of the Thorns"
+   "alias": "Zyra"
   }
  ]
 }

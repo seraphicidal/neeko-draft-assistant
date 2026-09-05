@@ -312,7 +312,17 @@ class Watcher(threading.Thread):
             if matchmaking.accept(client):
                 self.settings.accepted_total += 1
                 self._say(logbook.OK, "Queue accepted")
-                self._emit("action", {"text": "Queue accepted", "level": logbook.OK, "chime": True})
+                # The only action worth a desktop notification: it is the one
+                # that happens while you are away from the screen.
+                self._emit(
+                    "action",
+                    {
+                        "text": "Queue accepted",
+                        "level": logbook.OK,
+                        "chime": True,
+                        "notify": True,
+                    },
+                )
                 self._emit("counters", {})
                 return True
             self._say(logbook.WARN, "The client refused the accept")
