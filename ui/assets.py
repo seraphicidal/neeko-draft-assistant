@@ -21,7 +21,6 @@ ICON_PNG = ASSETS / "icon.png"
 FLOWER = NEEKO / "flower.png"
 HERO_BG = NEEKO / "hero_bg.png"
 
-# The header portrait, in order of preference. A GIF animates.
 AVATAR_SLOTS = (
     NEEKO / "avatar.gif",
     NEEKO / "avatar.png",
@@ -29,7 +28,6 @@ AVATAR_SLOTS = (
     NEEKO / "portrait.png",
 )
 
-# One illustration per situation, keyed by the roles in ui/status.py.
 ART_SLOTS = {
     "mood_idle": ("mood_idle.png", "waiting for the League client"),
     "mood_happy": ("mood_happy.png", "connected, lobby and post-game"),

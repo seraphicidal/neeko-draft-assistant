@@ -86,7 +86,6 @@ def leaf(width=128, height=256) -> Image.Image:
         ],
         fill=ORANGE + (255,),
     )
-    # Light-blue half, so it reads like the two-tone spikes in the art.
     draw.polygon(
         [
             (width * scale / 2, 0),
@@ -128,7 +127,6 @@ def hero(width=800, height=300) -> Image.Image:
     petals = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     small = flower(120).resize((96, 96), Image.LANCZOS)
     faint = flower(120, petal=PEACH, centre=SKY).resize((64, 64), Image.LANCZOS)
-    # Kept away from the top-right: the window buttons live over that corner.
     petals.alpha_composite(_fade(small, 70), (int(width * 0.58), int(height * 0.60)))
     petals.alpha_composite(_fade(faint, 55), (int(width * 0.05), int(height * 0.16)))
     petals.alpha_composite(_fade(faint, 40), (int(width * 0.30), int(height * 0.74)))

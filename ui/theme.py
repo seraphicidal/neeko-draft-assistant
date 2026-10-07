@@ -11,13 +11,11 @@ progress. Purple appears only as a small nod to Neeko.
 
 from __future__ import annotations
 
-# ---------------------------------------------------------------- palette ---
-
-BACKGROUND = "#0B111C"        # window ground, deep navy
-SURFACE = "#111A29"           # elevated panel
+BACKGROUND = "#0B111C"
+SURFACE = "#111A29"
 SURFACE_HOVER = "#172336"
 SURFACE_ACTIVE = "#1E2D45"
-SURFACE_SUNKEN = "#080D16"    # inputs, wells
+SURFACE_SUNKEN = "#080D16"
 
 BORDER = "#1E2A3D"
 BORDER_STRONG = "#2C3D55"
@@ -26,21 +24,19 @@ TEXT_PRIMARY = "#F4F7FC"
 TEXT_SECONDARY = "#A6B4CA"
 TEXT_MUTED = "#6B7B93"
 
-ACCENT = "#FF8A3D"            # orange, the signature
+ACCENT = "#FF8A3D"
 ACCENT_HOVER = "#FFA260"
 ACCENT_PRESSED = "#E8701F"
-ACCENT_INK = "#241206"        # text that sits on orange
+ACCENT_INK = "#241206"
 
-BLUE = "#5CC8F5"              # light blue, the state colour
+BLUE = "#5CC8F5"
 BLUE_HOVER = "#82D8F8"
 BLUE_DEEP = "#2A94C8"
 
 SUCCESS = "#4ADE9B"
 WARNING = "#F5C451"
 ERROR = "#F87171"
-NEEKO = "#C86BD8"             # a restrained nod to her palette
-
-# ---------------------------------------------------------------- spacing ---
+NEEKO = "#C86BD8"
 
 SPACE_1 = 4
 SPACE_2 = 8
@@ -55,7 +51,6 @@ RADIUS_MD = 12
 RADIUS_LG = 16
 RADIUS_XL = 20
 
-# Control geometry, so nothing is sized by eye.
 CONTROL_HEIGHT = 34
 BUTTON_HEIGHT = 32
 TOGGLE_WIDTH = 40
@@ -69,13 +64,9 @@ WINDOW_MIN_HEIGHT = 560
 WINDOW_MAX_HEIGHT = 860
 SHADOW_MARGIN = 16
 
-# --------------------------------------------------------------- movement ---
-
 DURATION_FAST = 120
 DURATION_NORMAL = 180
 DURATION_SLOW = 260
-
-# ------------------------------------------------------------- typography ---
 
 FONT = "Segoe UI"
 MONO = "Consolas"
@@ -102,9 +93,6 @@ def rgba(hex_colour: str, alpha: float) -> str:
     value = hex_colour.lstrip("#")
     red, green, blue = (int(value[index:index + 2], 16) for index in (0, 2, 4))
     return f"rgba({red}, {green}, {blue}, {alpha:.3f})"
-
-
-# ------------------------------------------------------------- stylesheet ---
 
 
 def stylesheet() -> str:

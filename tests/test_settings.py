@@ -19,7 +19,7 @@ class SettingsTest(unittest.TestCase):
 
         self.assertTrue(self.path.exists())
         self.assertTrue(settings.auto_accept)
-        self.assertFalse(settings.auto_pick)  # locking in is opt-in
+        self.assertFalse(settings.auto_pick)
 
     def test_everything_survives_a_round_trip(self):
         settings = Settings.load(self.path)
@@ -49,7 +49,6 @@ class SettingsTest(unittest.TestCase):
         self.assertEqual(reloaded.accepted_total, 12)
 
     def test_a_byte_order_mark_is_tolerated(self):
-        # Notepad and PowerShell both leave one behind.
         payload = json.dumps({"accept_delay": 4.0, "chat_message": "gl"})
         self.path.write_bytes(b"\xef\xbb\xbf" + payload.encode("utf-8"))
 
@@ -63,7 +62,7 @@ class SettingsTest(unittest.TestCase):
 
         settings = Settings.load(self.path)
 
-        self.assertTrue(settings.auto_accept)  # fresh defaults, no crash
+        self.assertTrue(settings.auto_accept)
         self.assertTrue(self.path.with_name(self.path.name + ".corrupt").exists())
         self.assertEqual(json.loads(self.path.read_text(encoding="utf-8"))["auto_accept"], True)
 
@@ -82,8 +81,8 @@ class SettingsTest(unittest.TestCase):
 
         settings = Settings.load(self.path)
 
-        self.assertFalse(settings.auto_accept)     # the good field is kept
-        self.assertEqual(settings.accept_delay, 0.0)  # the bad one falls back
+        self.assertFalse(settings.auto_accept)
+        self.assertEqual(settings.accept_delay, 0.0)
         self.assertFalse(hasattr(settings, "from_the_future"))
 
     def test_values_are_clamped(self):
@@ -111,7 +110,7 @@ class SettingsTest(unittest.TestCase):
 
         migrated = Settings.load(self.path, legacy_path=legacy)
 
-        self.assertFalse(migrated.auto_accept)     # old "enabled"
+        self.assertFalse(migrated.auto_accept)
         self.assertEqual(migrated.accept_delay, 3.0)
         self.assertFalse(migrated.sound)
         self.assertFalse(migrated.minimize_to_tray)

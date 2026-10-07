@@ -21,8 +21,6 @@ class FakeLcu:
         self.calls: list[tuple[str, str, object]] = []
         self.unavailable = False
 
-    # -- the client interface -------------------------------------------
-
     def request(self, method: str, path: str, payload=None, timeout: float = 4.0):
         if self.unavailable:
             raise ClientUnavailable("fake client is down")
@@ -51,8 +49,6 @@ class FakeLcu:
         status, body = self.get("/lol-summoner/v1/current-summoner")
         return body if status == 200 else None
 
-    # -- test helpers ----------------------------------------------------
-
     def paths(self, method: str | None = None) -> list[str]:
         return [path for verb, path, _ in self.calls if method is None or verb == method]
 
@@ -65,9 +61,6 @@ class FakeLcu:
 
     def count(self, method: str, path_fragment: str) -> int:
         return len(self.payloads(method, path_fragment))
-
-
-# -- payload builders ----------------------------------------------------
 
 
 def action(

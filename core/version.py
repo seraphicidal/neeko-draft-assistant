@@ -16,7 +16,6 @@ GITHUB_REPO = "neeko-draft-assistant"
 GITHUB_URL = f"https://github.com/{GITHUB_OWNER}/{GITHUB_REPO}"
 RELEASES_API = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/releases"
 
-# The installer asset a release must carry for the updater to offer it.
 INSTALLER_SUFFIX = "-Setup.exe"
 
 

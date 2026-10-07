@@ -118,7 +118,6 @@ class AvailabilityTest(unittest.TestCase):
         self.assertEqual(cs.pickable_ids(client), frozenset({AHRI, NEEKO}))
 
     def test_unavailable_pickable_endpoint_is_unknown_not_empty(self):
-        # None must not be read as "nothing is available".
         self.assertIsNone(cs.pickable_ids(FakeLcu()))
 
 

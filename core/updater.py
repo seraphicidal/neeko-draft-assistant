@@ -30,7 +30,6 @@ from core.version import (
 TIMEOUT = 12.0
 MAX_INSTALLER_BYTES = 200 * 1024 * 1024
 
-# States where an update must not interrupt: the user is drafting or playing.
 BUSY_STATES = frozenset(
     {
         "READY_CHECK",
@@ -43,7 +42,6 @@ BUSY_STATES = frozenset(
     }
 )
 
-# Inno Setup switches: no wizard, close and reopen the running app, no reboot.
 INSTALL_SWITCHES = ("/SILENT", "/SP-", "/NOCANCEL", "/CLOSEAPPLICATIONS", "/RESTARTAPPLICATIONS")
 
 CREATE_NO_WINDOW = 0x08000000 if sys.platform == "win32" else 0

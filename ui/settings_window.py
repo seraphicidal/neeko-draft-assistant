@@ -59,8 +59,6 @@ class SettingsWindow(QDialog):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        # The sidebar wires itself to the page stack, so the stack has to exist
-        # before the sidebar is built.
         self.pages = QStackedWidget()
         layout.addWidget(self._build_sidebar())
 
@@ -79,8 +77,6 @@ class SettingsWindow(QDialog):
         self.nav.setCurrentRow(0)
         self._building = False
         self.refresh_log()
-
-    # -------------------------------------------------------------- chrome ---
 
     def _build_sidebar(self) -> QWidget:
         panel = QFrame()
@@ -156,8 +152,6 @@ class SettingsWindow(QDialog):
         control.toggled.connect(handler)
         column.addWidget(control)
         return control
-
-    # --------------------------------------------------------------- pages ---
 
     def _page_general(self) -> QWidget:
         page, column = self._page("General", "How the app behaves on your desktop.")
@@ -403,8 +397,6 @@ class SettingsWindow(QDialog):
         column.addStretch(1)
         return page
 
-    # ------------------------------------------------------------ handlers ---
-
     def _render_delay(self, value: float) -> None:
         self.delay_value.setText("instantly" if value == 0 else f"{value:.1f} seconds")
 
@@ -499,8 +491,6 @@ class SettingsWindow(QDialog):
     def _clear_log(self) -> None:
         self.log.clear()
         self.refresh_log()
-
-    # ---------------------------------------------------------- live views ---
 
     def refresh_log(self) -> None:
         self.log_view.setPlainText(self.log.as_text())

@@ -9,11 +9,8 @@ from pathlib import Path
 
 ROOT = Path(SPECPATH).parent  # noqa: F821 - SPECPATH is injected by PyInstaller
 
-# tools/build.py writes this from core/version.py; running PyInstaller by hand
-# simply produces an executable without the Windows version resource.
 VERSION_RESOURCE = ROOT / "packaging" / "file_version.txt"
 
-# Qt ships a great deal we never touch; leaving it out roughly halves the build.
 EXCLUDES = [
     "tkinter",
     "PIL",
@@ -83,8 +80,6 @@ executable = EXE(  # noqa: F821
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,
-    # A tray app must not flash a console. Set NEEKO_CONSOLE=1 to build a
-    # debuggable executable that prints its traceback instead of vanishing.
     console=bool(os.environ.get("NEEKO_CONSOLE")),
     disable_windowed_traceback=False,
     icon=str(ROOT / "assets" / "icon.ico"),

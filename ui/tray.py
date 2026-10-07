@@ -78,8 +78,6 @@ class Tray(QSystemTrayIcon):
         ):
             self.open_requested.emit()
 
-    # -- keeping the menu honest -----------------------------------------
-
     def sync(self) -> None:
         """Mirror the settings, without bouncing signals back at them."""
         for action, attribute in (

@@ -13,7 +13,6 @@ class ConversationTest(unittest.TestCase):
         self.assertEqual(chat.champ_select_conversation_id(client), "draft@sec.pvp.net")
 
     def test_no_room_yet_is_not_an_error(self):
-        # The room appears a moment after the draft starts.
         client = FakeLcu({chat.CONVERSATIONS: (200, [{"id": "club@x", "type": "club"}])})
 
         self.assertIsNone(chat.champ_select_conversation_id(client))

@@ -13,7 +13,6 @@ from .lcu_client import LcuClient, ok
 READY_CHECK = "/lol-matchmaking/v1/ready-check"
 ACCEPT = "/lol-matchmaking/v1/ready-check/accept"
 
-# playerResponse values
 NO_ANSWER = "None"
 ACCEPTED = "Accepted"
 DECLINED = "Declined"
@@ -21,8 +20,8 @@ DECLINED = "Declined"
 
 @dataclass(frozen=True)
 class ReadyCheck:
-    state: str            # InProgress once the popup is up
-    player_response: str  # None / Accepted / Declined
+    state: str
+    player_response: str
     timer: float
 
     @property

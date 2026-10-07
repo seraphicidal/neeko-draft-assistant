@@ -47,11 +47,9 @@ class Catalog:
         self._champions: list[Champion] = []
         self._by_id: dict[int, Champion] = {}
         self.source = "empty"
-        self.version = ""       # the patch the bundled list came from
+        self.version = ""
         if champions is not None:
             self._replace(champions, "given")
-
-    # -- loading ---------------------------------------------------------
 
     @classmethod
     def bundled(cls) -> "Catalog":
@@ -63,14 +61,14 @@ class Catalog:
                 catalog.version = str(payload.get("version") or "")
             catalog._replace(_parse(entries), f"bundled ({catalog.version or '?'})")
         except (OSError, ValueError, AttributeError, TypeError):
-            pass  # an empty catalog is survivable; the client may still fill it
+            pass
         return catalog
 
     def refresh_from_client(self, client: LcuClient) -> bool:
         """Replace the list with the running client's own. False if it would not say."""
         try:
             status, body = client.get(SUMMARY, timeout=8.0)
-        except Exception:  # the caller decides what a dead client means
+        except Exception:
             return False
         if status != 200 or not isinstance(body, list):
             return False
@@ -84,8 +82,6 @@ class Catalog:
         self._champions = sorted(champions, key=lambda champion: champion.name)
         self._by_id = {champion.id: champion for champion in self._champions}
         self.source = source
-
-    # -- lookups ---------------------------------------------------------
 
     def __len__(self) -> int:
         return len(self._champions)
@@ -148,7 +144,7 @@ def _parse(entries) -> list[Champion]:
             continue
         alias = str(entry.get("alias") or name).strip()
         if "_" in alias:
-            continue  # a game mode's own copy; no champion alias has one
+            continue
         key = _fold(name)
         kept = best.get(key)
         if kept is None or champion_id < kept.id:

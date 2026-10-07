@@ -44,9 +44,9 @@ class PauseTest(unittest.TestCase):
 
         paused = _Paused(settings)
 
-        self.assertEqual(paused.accept_delay, 2.5)      # non-automatic settings pass through
+        self.assertEqual(paused.accept_delay, 2.5)
         self.assertEqual(paused.chat_message, "gl hf")
-        self.assertTrue(settings.auto_accept)           # the original is untouched
+        self.assertTrue(settings.auto_accept)
 
     def test_the_watcher_hands_the_paused_view_to_the_machine(self):
         watcher = Watcher(Settings(), Catalog(), LogBook(), lambda *_: None, connect=FakeLcu)
@@ -99,7 +99,7 @@ class TrayTest(unittest.TestCase):
 
         self.assertTrue(self.tray.pick_action.isChecked())
         self.assertTrue(self.tray.chat_action.isChecked())
-        self.assertEqual(self.emitted, [])  # sync must not look like a user click
+        self.assertEqual(self.emitted, [])
 
     def test_status_line_shows_the_connection(self):
         self.tray.set_status(True, "Champion select")

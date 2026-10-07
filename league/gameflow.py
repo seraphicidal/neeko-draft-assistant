@@ -6,8 +6,6 @@ from .lcu_client import LcuClient
 
 ENDPOINT = "/lol-gameflow/v1/gameflow-phase"
 
-# The phases the client reports. Anything unknown is passed through untouched
-# so a new Riot phase shows up in the UI rather than being swallowed.
 NONE = "None"
 LOBBY = "Lobby"
 MATCHMAKING = "Matchmaking"
@@ -33,7 +31,6 @@ LABELS = {
     "Unknown": "Unknown",
 }
 
-# Phases where a queue pop can happen, so polling tightens up.
 QUEUE_PHASES = frozenset({MATCHMAKING, READY_CHECK, "CheckedIntoTournament"})
 
 

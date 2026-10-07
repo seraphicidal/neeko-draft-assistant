@@ -1,23 +1,18 @@
-# Python
 __pycache__/
 *.py[cod]
 *.egg-info/
 .venv/
 venv/
 
-# Build output
 build/
 dist/
 *.spec.bak
-# Generated from core/version.py by tools/build.py
 packaging/file_version.txt
 
-# Editors
 .vscode/
 .idea/
 *.swp
 
-# Never commit anything from a running client or a real machine
 lockfile
 *.lockfile
 *.log
@@ -29,6 +24,5 @@ config.json.corrupt
 .env.*
 secrets.*
 
-# Local scratch
 scratch/
 tmp/

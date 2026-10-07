@@ -85,8 +85,6 @@ class Application:
         self._update_timer = QTimer(self.qt)
         self._update_timer.timeout.connect(lambda: self.check_updates(manual=False))
 
-    # -- lifecycle ---------------------------------------------------------
-
     def run(self) -> int:
         self.watcher.start()
         self.art.start()
@@ -129,8 +127,6 @@ class Application:
         self.settings_window.raise_()
         self.settings_window.activateWindow()
 
-    # -- watcher events -----------------------------------------------------
-
     def _on_event(self, kind: str, payload: dict) -> None:
         if kind == "status":
             status = payload["status"]
@@ -138,9 +134,6 @@ class Application:
             self.tray.set_status(status.connected, status.detail)
         elif kind == "action":
             self.window.show_action(payload["text"], payload["level"])
-            # Hovering, locking and chatting all happen while you are looking
-            # at champion select; the window says so and a toast on top of the
-            # client would only be in the way.
             if payload.get("notify"):
                 self.tray.notify(payload["text"])
             if payload.get("chime"):
@@ -153,15 +146,12 @@ class Application:
         elif kind == "counters":
             self.window.refresh_counters()
         elif kind == "catalog":
-            # The client can serve art now, so let previously failed art retry.
             self.art.forget(self.settings.preferred_champion_id)
             self.art.forget(self.settings.backup_champion_id)
             self.window.refresh_names_from_catalog()
 
     def _on_art(self, kind: str, champion_id: int, data: bytes) -> None:
         self.window.set_art(kind, champion_id, data)
-
-    # -- settings -----------------------------------------------------------
 
     def _on_settings_changed(self) -> None:
         self.window._load_from_settings()
@@ -187,8 +177,6 @@ class Application:
         self.window.pause_button.blockSignals(False)
         self.tray.notify("Paused - Neeko will not answer anything." if paused else "Back on duty.")
 
-    # -- updates --------------------------------------------------------------
-
     @property
     def busy_state(self) -> str:
         return self.watcher.machine.state.value
@@ -197,7 +185,7 @@ class Application:
         if self._checking:
             return
         if not manual and updater.is_busy(self.busy_state):
-            return  # never interrupt a draft or a game with an update prompt
+            return
         self._checking = True
         if self.settings_window is not None:
             self.settings_window.set_checking(True)
@@ -248,7 +236,6 @@ class Application:
             self.window.update_progress("Neeko will wait until you're out of the game.")
             return
         if not updater.running_as_installed_app():
-            # A source checkout has nothing for the installer to replace.
             webbrowser.open(f"{GITHUB_URL}/releases/latest")
             self.window.update_progress("Opened the release page in your browser.")
             return
@@ -279,8 +266,6 @@ class Application:
             return
         self.log.add("info", "Handing over to the installer")
         self.quit()
-
-    # -- feedback --------------------------------------------------------------
 
     def _play_cue(self) -> None:
         """The sound the user chose, or the built-in chime."""

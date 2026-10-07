@@ -54,7 +54,6 @@ class CoverageTest(unittest.TestCase):
                 self.assertIn(described.scene, SCENES)
 
     def test_every_tone_comes_from_the_palette(self):
-        # Colours are tokens, never one-off hex values.
         for state, described in status.BY_STATE.items():
             with self.subTest(state=state):
                 self.assertIn(described.tone, PALETTE)
@@ -131,7 +130,6 @@ class WordingTest(unittest.TestCase):
         self.assertEqual(status.humanise(""), "")
 
     def test_no_message_leaks_an_endpoint_or_a_status_code(self):
-        # A player should never be shown a route or an HTTP code.
         for described in status.BY_STATE.values():
             for line in (described.label, described.headline, described.detail, described.voice):
                 with self.subTest(line=line):

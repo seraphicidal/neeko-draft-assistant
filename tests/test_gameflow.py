@@ -25,7 +25,6 @@ class GameflowTest(unittest.TestCase):
         self.assertEqual(gameflow.label("ChampSelect"), "Champion select")
 
     def test_unknown_phase_is_passed_through(self):
-        # A phase Riot adds later should surface, not vanish.
         self.assertEqual(gameflow.label("SomeNewPhase"), "SomeNewPhase")
 
     def test_queue_phases_are_the_ones_that_can_pop(self):

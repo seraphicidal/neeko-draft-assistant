@@ -1,13 +1,5 @@
 name: release
 
-# Tag a version and this does the rest:
-#
-#     git tag v1.0.1
-#     git push origin v1.0.1
-#
-# The tag has to match core/version.py, the tests have to pass, and only then
-# is anything built or published.
-
 on:
   push:
     tags: ["v*"]

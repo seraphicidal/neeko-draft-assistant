@@ -75,7 +75,7 @@ class Decision:
     detail: str = ""
     problem: str = ""
     turn: str = ""
-    countdown: float = 0.0   # seconds left before the accept fires
+    countdown: float = 0.0
 
 
 @dataclass
@@ -125,8 +125,6 @@ class StateMachine:
         self._reset_queue()
         self._reset_draft("")
 
-    # -- bookkeeping -----------------------------------------------------
-
     def _attempt(self, kind: IntentKind) -> _Attempts:
         return self._attempts.setdefault(kind, _Attempts())
 
@@ -163,8 +161,6 @@ class StateMachine:
     def declared_champion(self) -> int:
         return self._declared_champion
 
-    # -- the decision ----------------------------------------------------
-
     def decide(self, snapshot: Snapshot, settings) -> Decision:
         decision = self._decide(snapshot, settings)
         self.state = decision.state
@@ -176,13 +172,6 @@ class StateMachine:
             self._reset_draft("")
             return Decision(AppState.DISCONNECTED, detail="Waiting for League Client...")
 
-        # The client answers the ready-check endpoint even when nothing is
-        # being asked of us, with a payload that reads `Invalid`. Only a live
-        # one is a match to answer; anything else means the last pop is over,
-        # so the accept is armed again for the next one. Without that, a
-        # declined match -- which drops you straight back into the queue,
-        # never leaving the matchmaking phase -- would leave the accept
-        # permanently spent.
         pop = snapshot.ready_check
         if pop is not None and pop.is_live:
             return self._decide_queue(snapshot, settings)
@@ -196,13 +185,8 @@ class StateMachine:
         state = PHASE_STATES.get(snapshot.phase, AppState.WAITING)
         return Decision(state, detail=gameflow.label(snapshot.phase))
 
-    # -- queue -----------------------------------------------------------
-
     def _decide_queue(self, snapshot: Snapshot, settings) -> Decision:
         pop = snapshot.ready_check
-        # A countdown that jumped backwards is a second pop we caught without
-        # ever seeing the quiet moment between the two. The margin is only
-        # there to tolerate a jittery float, not a real second of the clock.
         if pop.timer < self._pop_timer - 0.25:
             self._reset_queue()
         self._pop_timer = pop.timer
@@ -242,8 +226,6 @@ class StateMachine:
             intents=(Intent(IntentKind.ACCEPT_READY_CHECK),),
             detail="Accepting...",
         )
-
-    # -- draft -----------------------------------------------------------
 
     def _decide_draft(self, snapshot: Snapshot, settings) -> Decision:
         session = snapshot.session
@@ -305,7 +287,7 @@ class StateMachine:
 
         action = session.my_pick_action
         if action is None:
-            return []  # no pick slot of ours in this lobby (spectator, or bans only)
+            return []
 
         champion_id, problem = self._choose_champion(session, snapshot.pickable, settings)
         if not champion_id:
@@ -315,19 +297,17 @@ class StateMachine:
 
         intents: list[Intent] = []
 
-        # Hovering is safe at any point in the draft: it only shows intent.
         if settings.auto_declare and self._declared_champion != champion_id:
             attempt = self._attempt(IntentKind.DECLARE_CHAMPION)
             if attempt.exhausted:
                 problems.append("Could not declare the champion.")
             elif session.pick_intent == champion_id:
-                self._declared_champion = champion_id  # already hovered by hand
+                self._declared_champion = champion_id
             elif attempt.allow(snapshot.now):
                 intents.append(
                     Intent(IntentKind.DECLARE_CHAMPION, champion_id, action.id)
                 )
 
-        # Locking in happens only when the client says the action is live.
         if settings.auto_pick and session.is_my_pick_turn:
             attempt = self._attempt(IntentKind.LOCK_CHAMPION)
             if attempt.exhausted:
@@ -359,8 +339,6 @@ class StateMachine:
             if champion_id in taken:
                 blocked = blocked or f"{role} champion is banned or already taken."
                 continue
-            # An empty pickable set means the client would not say; only a
-            # populated set is treated as authoritative.
             if pickable and champion_id not in pickable:
                 blocked = blocked or f"{role} champion is not available to pick."
                 continue

@@ -115,7 +115,7 @@ class QueueTest(unittest.TestCase):
         for _ in range(3):
             decision = machine.decide(snap(now=now, ready_check=pop()), settings)
             fail(machine, decision, now)
-            now += 10.0  # push past the backoff each time
+            now += 10.0
 
         final = machine.decide(snap(now=now, ready_check=pop()), settings)
 
@@ -134,9 +134,6 @@ class QueueTest(unittest.TestCase):
         self.assertEqual(kinds(after_backoff), [IntentKind.ACCEPT_READY_CHECK])
 
     def test_the_endpoint_answering_between_pops_is_not_a_pop(self):
-        # The client serves the ready-check endpoint at all times; with no
-        # match on offer it reads `Invalid`. Treating that as a pop is what
-        # used to leave the app saying "match found" for a whole queue.
         decision = StateMachine().decide(
             snap(ready_check=no_pop(), phase="Matchmaking"), FakeSettings()
         )
@@ -145,9 +142,6 @@ class QueueTest(unittest.TestCase):
         self.assertEqual(kinds(decision), [])
 
     def test_a_declined_match_leaves_the_accept_armed(self):
-        # When a match is declined the client drops everyone straight back
-        # into the queue without ever leaving the matchmaking phase. The
-        # accept has to be armed again anyway, or it is spent for the session.
         machine, settings = StateMachine(), FakeSettings()
         succeed(machine, machine.decide(snap(now=1.0, ready_check=pop()), settings))
         machine.decide(snap(now=2.0, ready_check=pop("Accepted")), settings)
@@ -181,7 +175,7 @@ class QueueTest(unittest.TestCase):
         machine, settings = StateMachine(), FakeSettings()
         succeed(machine, machine.decide(snap(ready_check=pop()), settings))
 
-        machine.decide(snap(now=5.0, phase="Lobby"), settings)  # pop gone
+        machine.decide(snap(now=5.0, phase="Lobby"), settings)
         decision = machine.decide(snap(now=9.0, ready_check=pop()), settings)
 
         self.assertEqual(kinds(decision), [IntentKind.ACCEPT_READY_CHECK])
@@ -344,7 +338,6 @@ class AvailabilityTest(unittest.TestCase):
         )
 
     def test_no_champion_available_means_no_action_at_all(self):
-        # The whole point: never substitute a champion the user did not name.
         session = draft(
             local_cell=2,
             actions=[[action(1, cell=7, kind="ban", champion=NEEKO, completed=True),
@@ -378,7 +371,6 @@ class AvailabilityTest(unittest.TestCase):
         self.assertIn("not available", decision.problem)
 
     def test_an_empty_pickable_list_is_unknown_not_forbidden(self):
-        # The endpoint 404s outside a draft; that must not block everything.
         session = draft(local_cell=2, actions=[[action(5, cell=2, in_progress=True)]])
         settings = FakeSettings(preferred_champion_id=NEEKO, auto_declare=False)
 
@@ -425,7 +417,7 @@ class ChatTest(unittest.TestCase):
         machine, settings = StateMachine(), self.settings()
         succeed(machine, machine.decide(snap(session=draft(chat_id="room-1"), chat_ready=True), settings))
 
-        machine.decide(snap(now=60.0, phase="InProgress"), settings)  # draft over
+        machine.decide(snap(now=60.0, phase="InProgress"), settings)
         decision = machine.decide(
             snap(now=300.0, session=draft(chat_id="room-2"), chat_ready=True), settings
         )
@@ -513,7 +505,6 @@ class TransitionTest(unittest.TestCase):
         machine.decide(Snapshot(now=10.0, connected=False), settings)
         back = machine.decide(snap(now=20.0, session=session), settings)
 
-        # The client restarted, so the hover has to be made again.
         self.assertEqual(kinds(back), [IntentKind.DECLARE_CHAMPION])
 
 

@@ -75,18 +75,16 @@ class SearchOverlayTest(unittest.TestCase):
         self.assertEqual(self.requested, [AHRI])
 
     def test_the_icon_survives_a_second_search(self):
-        # The regression: the loader answers a champion once, so a row built
-        # for a later search has to come from the cache instead.
         cache: dict[int, QPixmap] = {}
         self.overlay.pixmap_for = cache.get
 
         self.overlay._on_typed("nee")
         self.assertEqual(self.requested, [NEEKO])
-        cache[NEEKO] = self.a_pixmap()          # the loader answered
+        cache[NEEKO] = self.a_pixmap()
         self.overlay.set_pixmap(NEEKO, cache[NEEKO])
 
-        self.overlay._on_typed("lux")           # rows are rebuilt
-        self.overlay._on_typed("nee")           # and back again
+        self.overlay._on_typed("lux")
+        self.overlay._on_typed("nee")
 
         self.assertEqual(self.requested.count(NEEKO), 1, "asked for the same icon twice")
         self.assertIsNotNone(self.overlay._rows[NEEKO].icon._pixmap)
@@ -101,7 +99,7 @@ class SearchOverlayTest(unittest.TestCase):
     def test_art_for_a_champion_no_longer_listed_is_ignored(self):
         self.overlay._on_typed("ahri")
 
-        self.overlay.set_pixmap(LUX, self.a_pixmap())  # must not raise
+        self.overlay.set_pixmap(LUX, self.a_pixmap())
 
         self.assertNotIn(LUX, self.overlay._rows)
 
@@ -112,7 +110,6 @@ class SearchOverlayTest(unittest.TestCase):
         self.assertIn("No champion", self.overlay.hint.text())
 
     def test_the_same_search_twice_keeps_the_rows_it_had(self):
-        # Rebuilding identical rows would throw away icons that had arrived.
         self.overlay._on_typed("nee")
         row = self.overlay._rows[NEEKO]
         self.overlay.set_pixmap(NEEKO, self.a_pixmap())
@@ -123,8 +120,6 @@ class SearchOverlayTest(unittest.TestCase):
         self.assertTrue(row.has_pixmap())
 
     def test_champions_carry_no_title(self):
-        # Titles like "the Sinister Blade" were taken out of the interface, and
-        # out of the model with it so nothing keeps fetching them.
         from dataclasses import fields
 
         self.assertNotIn("title", [entry.name for entry in fields(Champion)])

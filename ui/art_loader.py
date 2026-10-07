@@ -15,7 +15,6 @@ from PySide6.QtCore import QObject, Signal
 from league import champion_art
 from league.lcu_client import ClientUnavailable, LcuClient, discover
 
-# How long to leave a missing League client alone before looking again.
 CLIENT_RETRY_SECONDS = 5.0
 
 
@@ -61,8 +60,6 @@ class ArtLoader(QObject):
         with self._lock:
             self._seen = {key for key in self._seen if key[1] != champion_id}
 
-    # -- worker ----------------------------------------------------------
-
     def _lcu(self) -> LcuClient | None:
         """Its own client, so nothing is shared with the watcher thread.
 
@@ -96,13 +93,10 @@ class ArtLoader(QObject):
                     version=self.catalog.version,
                     client=self._lcu(),
                 )
-            except Exception:  # art is decoration; never take the app down for it
+            except Exception:
                 data = None
             if data:
                 self.loaded.emit(kind, champion_id, data)
             else:
-                # Forgotten rather than remembered as failed: the next time
-                # this champion is shown it gets another go, by which point
-                # the client may well be up.
                 with self._lock:
                     self._seen.discard((kind, champion_id))

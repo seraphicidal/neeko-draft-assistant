@@ -20,7 +20,7 @@ from ui.widgets import (
     text,
 )
 
-STAGE_HEIGHT = 226   # tall enough for the draft scene, the busiest one
+STAGE_HEIGHT = 226
 
 
 class Scene(QWidget):
@@ -33,8 +33,6 @@ class Scene(QWidget):
         self.layout_column = QVBoxLayout(self)
         self.layout_column.setContentsMargins(0, 0, 0, 0)
         self.layout_column.setSpacing(theme.SPACE_1)
-        # Leading and trailing stretch, so a short scene sits in the middle of
-        # the stage rather than leaving a band of nothing underneath it.
         self.layout_column.addStretch(1)
 
         self.art = NeekoArt(self.ART_HEIGHT)

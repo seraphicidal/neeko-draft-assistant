@@ -99,8 +99,6 @@ class Watcher(threading.Thread):
         self._chat_lookup_at = 0.0
         self._draft_identity = ""
 
-    # -- lifecycle -------------------------------------------------------
-
     def stop(self) -> None:
         self._stop.set()
 
@@ -145,12 +143,10 @@ class Watcher(threading.Thread):
                 interval = self._tick()
             except ClientUnavailable:
                 interval = self._drop_client()
-            except Exception as exc:  # a dead watcher thread would fail silently
+            except Exception as exc:
                 self._say(logbook.ERROR, f"Unexpected error: {exc}")
                 interval = self._drop_client()
             self._stop.wait(interval)
-
-    # -- reporting -------------------------------------------------------
 
     def _say(self, level: str, text: str) -> None:
         entry = self.log.add(level, text)
@@ -161,12 +157,10 @@ class Watcher(threading.Thread):
         self._status = status
         self._emit("status", {"status": status})
 
-    # -- connection ------------------------------------------------------
-
     def _discover(self) -> LcuClient:
         credentials = discover(self._install_dir)
         client = LcuClient(credentials)
-        gameflow.read(client)  # proves the credentials before we trust them
+        gameflow.read(client)
         self._install_dir = credentials.install_dir or self._install_dir
         return client
 
@@ -174,8 +168,6 @@ class Watcher(threading.Thread):
         try:
             client = self._connect_client()
         except ClientUnavailable:
-            # A stale lockfile from a crashed client would keep failing, so the
-            # cached install directory is dropped and discovery starts over.
             self._install_dir = None
             self._publish(StatusView())
             return INTERVAL_DISCONNECTED
@@ -209,8 +201,6 @@ class Watcher(threading.Thread):
         self._chat_conversation = None
         self._chat_lookup_at = 0.0
         self._draft_identity = ""
-
-    # -- the loop --------------------------------------------------------
 
     def _tick(self) -> float:
         if self._client is None:
@@ -301,8 +291,6 @@ class Watcher(threading.Thread):
         self._chat_conversation = chat.champ_select_conversation_id(self._client)
         return self._chat_conversation is not None
 
-    # -- doing the thing -------------------------------------------------
-
     def _execute(self, intent: Intent) -> bool:
         client = self._client
         if client is None:
@@ -312,8 +300,6 @@ class Watcher(threading.Thread):
             if matchmaking.accept(client):
                 self.settings.accepted_total += 1
                 self._say(logbook.OK, "Queue accepted")
-                # The only action worth a desktop notification: it is the one
-                # that happens while you are away from the screen.
                 self._emit(
                     "action",
                     {

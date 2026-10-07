@@ -34,7 +34,6 @@ def summarise(path: str, body) -> str:
         return body
     if isinstance(body, list):
         if path == chat.CONVERSATIONS:
-            # Types only; conversation contents are none of our business.
             types = sorted({str(entry.get("type")) for entry in body if isinstance(entry, dict)})
             return f"{len(body)} conversations: {', '.join(types)}"
         return f"{len(body)} entries"

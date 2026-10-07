@@ -24,17 +24,10 @@ DEFAULT_SOURCE = Path.home() / "OneDrive" / "Desktop" / "neeko"
 MAGIC = (255, 0, 255)
 MAX_SIDE = 620
 
-# role, source file, flood tolerance, cut out at all, extra seed points.
-# Seeds and the optional pre-crop box are fractions of the image, and only
-# matter where the drawing sits on a coloured card inside a white frame: the
-# corners never reach that inner background on their own.
 SOURCES = [
     ("mood_idle", "450754c0b9a3d2ff51a0decb7e022586.jpg", 60, True, (), None),
     ("mood_happy", "d570685efab6296dcff412b7b3459aa9.jpg", 78, True, (), None),
     ("mood_alert", "image-1788485103629.webp", 60, True, (), None),
-    # image-1788485107277.webp is deliberately left out: its green card has a
-    # gradient, and a flood fill cannot separate it from Neeko's own green
-    # without a real matting pass.
     ("mood_calm", "image-1788485110536.webp", 50, True, (), None),
     ("portrait", "image-1788485113681.webp", 0, False, (), None),
 ]
@@ -55,10 +48,8 @@ def cut_out(image: Image.Image, tolerance: int, extra_seeds=()) -> Image.Image:
     for seed in seeds:
         ImageDraw.floodfill(work, seed, MAGIC, thresh=tolerance)
 
-    # Anything the fill reached is background; everything else is Neeko.
     filled = ImageChops.difference(work, Image.new("RGB", rgb.size, MAGIC)).convert("L")
     alpha = filled.point(lambda value: 0 if value < 12 else 255)
-    # A touch of blur softens the stair-stepping the threshold leaves behind.
     alpha = alpha.filter(ImageFilter.GaussianBlur(0.8)).point(
         lambda value: 0 if value < 90 else min(255, int(value * 1.35))
     )

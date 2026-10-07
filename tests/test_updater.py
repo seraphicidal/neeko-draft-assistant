@@ -41,7 +41,6 @@ class VersionTest(unittest.TestCase):
         self.assertEqual(version_tuple("not-a-version"), (0, 0, 0))
 
     def test_versions_compare_numerically(self):
-        # The trap a string comparison falls into.
         self.assertGreater(version_tuple("1.10.0"), version_tuple("1.9.0"))
 
 
@@ -97,7 +96,6 @@ class ParseReleasesTest(unittest.TestCase):
                          "Neeko learned a new trick.")
 
     def test_a_single_object_is_accepted(self):
-        # GitHub's /releases/latest returns one object rather than a list.
         self.assertIsNotNone(updater.parse_releases(release_json("v1.1.0"), "1.0.0"))
 
     def test_nonsense_payloads_raise_rather_than_crash(self):
@@ -133,15 +131,13 @@ class BusyStateTest(unittest.TestCase):
 
 class SettingsSurviveTest(unittest.TestCase):
     def test_settings_live_outside_the_program_folder(self):
-        # An installer replaces its own directory wholesale, so a config kept
-        # inside it would be wiped by every update.
         from core.settings import CONFIG_DIR
         from core.paths import program_dir
 
         try:
             Path(CONFIG_DIR).resolve().relative_to(Path(program_dir()).resolve())
         except ValueError:
-            return  # separate, which is what we want
+            return
         self.fail(f"settings at {CONFIG_DIR} would be destroyed by an update")
 
     def test_the_check_reports_safe_in_a_checkout(self):
@@ -159,8 +155,6 @@ class SettingsSurviveTest(unittest.TestCase):
             before.accepted_total = 41
             before.save(config)
 
-            # Whatever an update does to the program folder, it does not touch
-            # the config directory.
             (Path(program) / "NeekoDraftAssistant.exe").write_text("old build")
             for item in Path(program).iterdir():
                 item.unlink()
@@ -218,8 +212,6 @@ class BuildConfigurationTest(unittest.TestCase):
         self.assertIn('"assets"', spec)
 
     def test_a_released_build_never_opens_a_console(self):
-        # A console build can be asked for while debugging, but only ever by
-        # setting NEEKO_CONSOLE, and the release workflow must not set it.
         spec = (self.ROOT / "packaging" / "neeko.spec").read_text(encoding="utf-8")
         workflow = (self.ROOT / ".github" / "workflows" / "release.yml").read_text(
             encoding="utf-8"

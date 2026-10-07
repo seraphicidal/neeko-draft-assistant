@@ -13,7 +13,6 @@ from dataclasses import dataclass
 
 from ui import theme
 
-# Scenes the dashboard can show. One per situation, not one per state.
 OFFLINE = "offline"
 IDLE = "idle"
 QUEUE = "queue"
@@ -21,7 +20,6 @@ READY = "ready"
 DRAFT = "draft"
 GAME = "game"
 
-# Illustration roles, resolved to files by ui.assets.
 ART_IDLE = "mood_idle"
 ART_HAPPY = "mood_happy"
 ART_ALERT = "mood_alert"
@@ -33,14 +31,14 @@ ART_PORTRAIT = "portrait"
 class Status:
     """Everything the interface needs to describe one moment."""
 
-    label: str        # short, for the pill and the tray
-    headline: str     # the stage's own heading
-    detail: str       # one supporting sentence
-    voice: str        # what Neeko says
-    tone: str         # colour from the palette
-    art: str          # illustration role
-    scene: str        # which stage to show
-    live: bool = True  # whether the status dot should breathe
+    label: str
+    headline: str
+    detail: str
+    voice: str
+    tone: str
+    art: str
+    scene: str
+    live: bool = True
 
 
 _UNKNOWN = Status(
@@ -200,8 +198,6 @@ def for_action(text: str) -> Reaction | None:
     return None
 
 
-# Anything the user should never have to decode. The watcher and the state
-# machine already speak plainly; this catches the few phrasings that leak.
 _REWRITES = {
     "Lost the League client, reconnecting": (
         "Lost the League client. Neeko is reconnecting..."

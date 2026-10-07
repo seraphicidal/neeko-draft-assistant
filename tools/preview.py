@@ -85,7 +85,6 @@ SCENARIOS = {
     "sound": lambda: base("None"),
 }
 
-# Which settings page each settings scenario opens on.
 SETTINGS_PAGE = {"about": "About", "sound": "Queue"}
 
 
@@ -129,7 +128,6 @@ def main() -> int:
     app.settings.chat_message = "hello gl hf"
     app.settings.accepted_total = 37
     app.settings.picks_total = 12
-    # A long delay keeps the ready-check countdown on screen to be looked at.
     app.settings.accept_delay = 8.0 if scenario == "ready" else 2.5
     if scenario == "sound":
         app.settings.sound_file = str(_a_sound_file(temporary.parent))

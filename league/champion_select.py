@@ -16,7 +16,6 @@ ACTION = "/lol-champ-select/v1/session/actions/{action_id}"
 PICKABLE = "/lol-champ-select/v1/pickable-champion-ids"
 BANNABLE = "/lol-champ-select/v1/bannable-champion-ids"
 
-# timer.phase values
 PLANNING = "PLANNING"
 BAN_PICK = "BAN_PICK"
 FINALIZATION = "FINALIZATION"
@@ -53,12 +52,10 @@ class Session:
     local_cell_id: int
     actions: tuple[Action, ...]
     phase: str
-    time_left: float                  # seconds left in the current phase
-    pick_intent: int                  # champion this player has declared, 0 for none
+    time_left: float
+    pick_intent: int
     chat_id: str
     identity: str = field(compare=False, default="")
-
-    # -- my actions ------------------------------------------------------
 
     @property
     def my_pick_action(self) -> Action | None:
@@ -100,8 +97,6 @@ class Session:
             for action in self.actions
         )
 
-    # -- what is off the table ------------------------------------------
-
     @property
     def taken_champion_ids(self) -> frozenset[int]:
         """Banned, plus locked in by anyone. Our own hover does not count."""
@@ -115,8 +110,6 @@ class Session:
                 if action.actor_cell_id != self.local_cell_id:
                     taken.add(action.champion_id)
         return frozenset(taken)
-
-    # -- parsing ---------------------------------------------------------
 
     @classmethod
     def parse(cls, raw: dict) -> "Session":
@@ -139,10 +132,6 @@ class Session:
 
         chat_id = str((raw.get("chatDetails") or {}).get("multiUserChatId") or "")
 
-        # A stable name for this one draft, so an accept, a hover and a chat
-        # message cannot leak from one lobby into the next. The chat id is the
-        # client's own identifier; the action ids are a good enough stand-in for
-        # the custom games that have no chat room.
         identity = chat_id or f"cell{local_cell_id}:" + ",".join(
             str(action.id) for action in actions
         )

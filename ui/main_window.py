@@ -89,7 +89,6 @@ class HeaderBar(QWidget):
         controls.addStretch(1)
         layout.addLayout(controls)
 
-    # The whole strip drags the window, except where a control sits.
     def mousePressEvent(self, event) -> None:  # noqa: N802 - Qt naming
         if event.button() == Qt.MouseButton.LeftButton:
             self._drag_from = (
@@ -166,7 +165,7 @@ class MainWindow(QWidget):
         self._splashes: dict[int, QPixmap] = {}
         self._neeko_art = ArtCache()
         self._state = ""
-        self._picking = ""          # which slot the overlay is choosing for
+        self._picking = ""
         self._accept_countdown: float | None = None
 
         self.setWindowTitle(APP_NAME)
@@ -224,8 +223,6 @@ class MainWindow(QWidget):
 
         self._load_from_settings()
         self.adjustSize()
-
-    # ------------------------------------------------------------ layout ---
 
     def _build_status_strip(self) -> QHBoxLayout:
         strip = QHBoxLayout()
@@ -408,8 +405,6 @@ class MainWindow(QWidget):
         strip.addWidget(self.pause_button)
         return strip
 
-    # ------------------------------------------------------------ painting ---
-
     def paintEvent(self, _event) -> None:  # noqa: N802 - Qt naming
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -421,8 +416,6 @@ class MainWindow(QWidget):
         path.addRoundedRect(body, theme.RADIUS_XL, theme.RADIUS_XL)
         painter.fillPath(path, colour(theme.BACKGROUND))
         painter.strokePath(path, colour(theme.BORDER))
-
-    # ------------------------------------------------- settings <-> widgets ---
 
     def _load_from_settings(self) -> None:
         settings = self.settings
@@ -493,8 +486,6 @@ class MainWindow(QWidget):
             else:
                 draft.hero.set_splash(pixmap)
 
-    # ------------------------------------------------------------- overlay ---
-
     def _open_overlay(self, slot: str) -> None:
         self._picking = slot
         heading = "Choose your champion" if slot == PRIMARY else "Choose a backup champion"
@@ -522,8 +513,6 @@ class MainWindow(QWidget):
         self._close_overlay()
         self._save()
         self.toast.show_message(f"{name} set as your {slot} champion", theme.ACCENT)
-
-    # ------------------------------------------------------------ handlers ---
 
     def _save(self) -> None:
         self.settings.save()
@@ -587,8 +576,6 @@ class MainWindow(QWidget):
         self._render_stats()
         self._save()
 
-    # -------------------------------------------------------- live status ---
-
     def apply_status(self, view) -> None:
         status = status_module.for_state(view.state)
         self._accept_countdown = view.accept_in if view.accept_in > 0 else None
@@ -636,10 +623,6 @@ class MainWindow(QWidget):
         else:
             self.toast.show_message(message, theme.TEXT_SECONDARY)
 
-    # ------------------------------------------------- context for the stage ---
-    # The scenes ask the window for what they need to draw; the window never
-    # asks them anything back.
-
     def art_for(self, role: str) -> QPixmap | None:
         return self._neeko_art.get(role)
 
@@ -680,15 +663,11 @@ class MainWindow(QWidget):
     def draft_phase_seconds(self) -> float:
         return DRAFT_PHASE_SECONDS
 
-    # ------------------------------------------------------------- updates ---
-
     def offer_update(self, release) -> None:
         self.update_banner.offer(release.version)
 
     def update_progress(self, message: str) -> None:
         self.update_banner.working(message)
-
-    # -------------------------------------------------------------- window ---
 
     def keyPressEvent(self, event) -> None:  # noqa: N802 - Qt naming
         if event.key() == Qt.Key.Key_Escape and self.overlay.isVisible():

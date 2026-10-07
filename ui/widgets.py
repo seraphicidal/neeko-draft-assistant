@@ -47,9 +47,6 @@ from PySide6.QtWidgets import (
 
 from ui import theme
 
-# --------------------------------------------------------------- helpers ---
-
-
 def colour(value: str, alpha: float = 1.0) -> QColor:
     result = QColor(value)
     if alpha < 1.0:
@@ -100,9 +97,6 @@ def paint_shadow(painter: QPainter, rect: QRectF, radius: int, spread: int = 14)
         painter.drawRoundedRect(
             rect.adjusted(-step, -step + 2, step, step + 3), radius + step, radius + step
         )
-
-
-# ------------------------------------------------------------ primitives ---
 
 
 class Divider(QWidget):
@@ -298,7 +292,6 @@ class SettingRow(QWidget):
         self.toggled.emit(value)
 
     def _render(self, value: bool) -> None:
-        # State is spelled out as well as coloured, so it never depends on hue.
         self.state.setText("ON" if value else "OFF")
         self.state.setStyleSheet(
             theme.font_css("caption", theme.ACCENT if value else theme.TEXT_MUTED)
@@ -623,9 +616,6 @@ class NeekoArt(QWidget):
         painter.drawPixmap(int((self.width() - scaled.width()) / 2), 0, scaled)
 
 
-# ---------------------------------------------------------- champion bits ---
-
-
 class ChampionIcon(QWidget):
     """A rounded champion portrait, or a placeholder initial."""
 
@@ -705,7 +695,6 @@ class ChampionTile(QAbstractButton):
         names = QVBoxLayout()
         names.setSpacing(0)
         self.name = text("Choose a champion", "body-strong" if primary else "body")
-        # Only shown while the slot is empty; a chosen champion needs no caption.
         self.hint = text(
             "your first pick" if primary else "if the first one is gone", "small"
         )
@@ -827,13 +816,11 @@ class ChampionHero(QWidget):
                 Qt.AspectRatioMode.KeepAspectRatioByExpanding,
                 Qt.TransformationMode.SmoothTransformation,
             )
-            # Splashes are composed around the face; bias upward to keep it in frame.
             painter.drawPixmap(
                 int((self.width() - scaled.width()) * 0.5),
                 int((self.height() - scaled.height()) * 0.3),
                 scaled,
             )
-            # One horizontal mask keeps the text side readable without a slab.
             wash = QLinearGradient(0, 0, self.width(), 0)
             wash.setColorAt(0.0, colour(theme.SURFACE, 0.98))
             wash.setColorAt(0.52, colour(theme.SURFACE, 0.80))
@@ -883,8 +870,8 @@ class SearchOverlay(QFrame):
     dismissed = Signal()
     art_wanted = Signal(str, int)
 
-    VISIBLE_ROWS = 6      # how tall the list is; the rest is scrolled to
-    MAX_RESULTS = 250     # every champion fits, with room for the next ones
+    VISIBLE_ROWS = 6
+    MAX_RESULTS = 250
 
     def __init__(self, catalog, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -892,9 +879,6 @@ class SearchOverlay(QFrame):
         self._rows: dict[int, ChampionResult] = {}
         self._shown: list[int] = []
         self._asked: set[int] = set()
-        # Answers "do we already have this icon?". Rows are rebuilt on every
-        # keystroke, and the loader only ever fetches a champion once, so a row
-        # created for a second search would otherwise never be filled in.
         self.pixmap_for = lambda champion_id: None
         self.setObjectName("overlay")
         self.setStyleSheet(
@@ -930,12 +914,8 @@ class SearchOverlay(QFrame):
         self.results.setFixedHeight(6 + self.VISIBLE_ROWS * ChampionResult.HEIGHT)
         self.results.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.results.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        # Pixel scrolling, so the wheel and the handle both move smoothly
-        # instead of jumping a whole champion at a time.
         self.results.setVerticalScrollMode(QListWidget.ScrollMode.ScrollPerPixel)
         self.results.verticalScrollBar().valueChanged.connect(self._on_scrolled)
-        # A scrollbar of its own, wider and in the accent colour: on a list of
-        # a hundred and seventy the app-wide one is a thread you cannot grab.
         self.results.setStyleSheet(
             f"""
             QListWidget {{ background: transparent; border: none; }}
@@ -965,8 +945,6 @@ class SearchOverlay(QFrame):
         layout.addWidget(self.hint)
         self.hide()
 
-    # -- opening and closing ---------------------------------------------
-
     def open_for(self, heading: str) -> None:
         self.heading.setText(heading)
         self.field.clear()
@@ -984,8 +962,6 @@ class SearchOverlay(QFrame):
             return
         super().keyPressEvent(event)
 
-    # -- searching --------------------------------------------------------
-
     def _default_list(self):
         """Nothing typed yet: the whole roster, alphabetically."""
         return self.catalog.all[: self.MAX_RESULTS]
@@ -999,9 +975,6 @@ class SearchOverlay(QFrame):
         self._populate(matches)
 
     def _populate(self, champions) -> None:
-        # Typing `kata` after `kat` leaves the same Katarina on screen, and so
-        # does reopening the overlay. Keeping those rows is not just faster --
-        # it keeps the icons that already arrived in them.
         listed = [champion.id for champion in champions]
         if listed != self._shown:
             self.results.clear()

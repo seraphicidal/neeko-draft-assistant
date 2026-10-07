@@ -34,8 +34,6 @@ class FromClientTest(unittest.TestCase):
         self.assertEqual(data, b"icon-bytes")
 
     def test_the_splash_is_looked_up_in_the_champion_document(self):
-        # The client does not serve splashes at a guessable path -- the real
-        # one is named inside the champion's own JSON.
         client = client_with_art()
 
         data = champion_art._from_client(champion_art.SPLASH, NEEKO, client)

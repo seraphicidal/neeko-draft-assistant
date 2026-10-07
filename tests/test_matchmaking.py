@@ -17,7 +17,6 @@ class ReadyCheckTest(unittest.TestCase):
         self.assertTrue(pop.is_unanswered)
 
     def test_no_queue_means_no_pop(self):
-        # The client answers 404 with "Not attached to a matchmaking queue".
         self.assertIsNone(mm.read(FakeLcu()))
 
     def test_answered_pop_is_no_longer_unanswered(self):

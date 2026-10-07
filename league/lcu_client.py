@@ -22,7 +22,6 @@ import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
-# Keeps a console window from flashing up when we shell out under pythonw.
 CREATE_NO_WINDOW = 0x08000000 if sys.platform == "win32" else 0
 
 _TOKEN_RE = re.compile(r"--remoting-auth-token=([\w-]+)")
@@ -30,15 +29,12 @@ _PORT_RE = re.compile(r"--app-port=(\d+)")
 _INSTALL_RE = re.compile(r'--install-directory=([^"]+)')
 _YAML_PATH_RE = re.compile(r'product_install_full_path:\s*"?([^"\r\n]+)"?')
 
-# Written by Riot's installer; the cheapest way to learn where the game lives.
 _PRODUCT_SETTINGS = Path(
     os.environ.get("ProgramData", r"C:\ProgramData")
 ) / "Riot Games/Metadata/league_of_legends.live/league_of_legends.live.product_settings.yaml"
 
 _DEFAULT_INSTALL = Path(r"C:\Riot Games\League of Legends")
 
-# No double quotes in here on purpose: subprocess wraps the whole script in
-# quotes for the Windows command line, and nested ones do not survive the trip.
 _PS_COMMAND = (
     "Get-CimInstance Win32_Process -Filter 'name=''LeagueClientUx.exe''' "
     "| Select-Object -First 1 -ExpandProperty CommandLine"
@@ -152,8 +148,6 @@ class LcuClient:
         secret = base64.b64encode(f"riot:{credentials.token}".encode()).decode()
         self._headers = {"Authorization": f"Basic {secret}", "Accept": "application/json"}
 
-    # -- plumbing --------------------------------------------------------
-
     def request(self, method: str, path: str, payload=None, timeout: float = 4.0):
         """Return ``(status, parsed_body)``. HTTP errors are values, not exceptions.
 
@@ -196,8 +190,6 @@ class LcuClient:
     def get_bytes(self, path: str, timeout: float = 8.0) -> bytes | None:
         status, raw = self.raw_request("GET", path, timeout=timeout)
         return raw if 200 <= status < 300 else None
-
-    # -- the one call everything else leans on ---------------------------
 
     def current_summoner(self) -> dict | None:
         status, body = self.get("/lol-summoner/v1/current-summoner")

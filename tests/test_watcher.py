@@ -54,8 +54,8 @@ class ConnectionTest(WatcherTestCase):
         )
         watcher, _ = self.build(client)
 
-        step(watcher)  # connect
-        step(watcher)  # first real poll
+        step(watcher)
+        step(watcher)
 
         status = self.statuses()[-1]
         self.assertTrue(status.connected)
@@ -81,12 +81,12 @@ class ConnectionTest(WatcherTestCase):
         step(watcher)
         self.assertTrue(self.statuses()[-1].connected)
 
-        client.unavailable = True          # League closes
+        client.unavailable = True
         interval = step(watcher)
         self.assertEqual(interval, INTERVAL_DISCONNECTED)
         self.assertFalse(self.statuses()[-1].connected)
 
-        client.unavailable = False         # and comes back
+        client.unavailable = False
         step(watcher)
         step(watcher)
 
@@ -107,7 +107,7 @@ class ConnectionTest(WatcherTestCase):
 
         step(watcher)
 
-        self.assertEqual(len(watcher.catalog), 1)  # the id=-1 placeholder is dropped
+        self.assertEqual(len(watcher.catalog), 1)
         self.assertEqual(watcher.catalog.source, "league client")
 
 
@@ -155,12 +155,10 @@ class QueueTest(WatcherTestCase):
             }
         )
         watcher, settings = self.build(client)
-        step(watcher)  # connect
-        step(watcher)  # the pop, accepted
+        step(watcher)
+        step(watcher)
         self.assertEqual(client.count("POST", mm.ACCEPT), 1)
 
-        # Someone declined. Back to searching -- and the phase never left the
-        # queue, so the endpoint keeps answering with an idle payload.
         client.routes[gameflow.ENDPOINT] = (200, "Matchmaking")
         client.routes[mm.READY_CHECK] = (200, ready_check_payload(state="Invalid", timer=0.0))
         step(watcher)
@@ -241,8 +239,6 @@ class DraftTest(WatcherTestCase):
         self.assertEqual(client.count("PATCH", "/actions/5"), 1)
 
     def test_draft_actions_stay_out_of_the_notification_area(self):
-        # Hovering, locking and chatting all happen while champion select is on
-        # screen; a Windows toast on top of it would only be in the way.
         client = self.draft_client([[action(5, cell=2, in_progress=True)]])
         watcher, _ = self.build(
             client,

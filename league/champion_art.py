@@ -25,14 +25,9 @@ CACHE_DIR = (
     / "champions"
 )
 
-# Local client asset routes. The icon has a stable address; the splash does
-# not -- its real path is spelled out in the champion's own detail document,
-# so it has to be looked up first.
 LCU_ICON = "/lol-game-data/assets/v1/champion-icons/{champion_id}.png"
 LCU_DETAIL = "/lol-game-data/assets/v1/champions/{champion_id}.json"
 
-# Riot's public CDN, used when the client is not running. Icons live under a
-# patch folder, so the patch has to be a real one -- there is no `latest`.
 CDN_ICON = "https://ddragon.leagueoflegends.com/cdn/{version}/img/champion/{alias}.png"
 CDN_SPLASH = "https://ddragon.leagueoflegends.com/cdn/img/champion/splash/{alias}_0.jpg"
 CDN_VERSIONS = "https://ddragon.leagueoflegends.com/api/versions.json"
@@ -62,7 +57,7 @@ def store(kind: str, champion_id: int, data: bytes) -> None:
         temporary.write_bytes(data)
         os.replace(temporary, path)
     except OSError:
-        pass  # a cache we cannot write is still a working app, just slower
+        pass
 
 
 def _splash_path(champion_id: int, client) -> str | None:
@@ -87,7 +82,7 @@ def _from_client(kind: str, champion_id: int, client) -> bytes | None:
             return client.get_bytes(LCU_ICON.format(champion_id=champion_id))
         path = _splash_path(champion_id, client)
         return client.get_bytes(path) if path else None
-    except Exception:  # a dead client just means we try the CDN
+    except Exception:
         return None
 
 
@@ -123,9 +118,6 @@ def _from_cdn(kind: str, alias: str, version: str) -> bytes | None:
         return None
     if kind != ICON:
         return _fetch(CDN_SPLASH.format(alias=alias))
-    # The bundled patch first -- it is right for months at a time and costs no
-    # extra request. Only when it is missing or too old is the CDN asked what
-    # the current one is.
     for candidate in (version, newest_version()):
         if not candidate:
             continue

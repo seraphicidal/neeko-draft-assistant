@@ -15,7 +15,7 @@ from pathlib import Path
 from league.lcu_client import CREATE_NO_WINDOW
 
 APP_NAME = "Neeko Draft Assistant"
-LEGACY_NAME = "Queue Auto-Accept"  # the shortcut the queue-only build made
+LEGACY_NAME = "Queue Auto-Accept"
 
 from core.paths import assets_dir, launch_target, program_dir
 

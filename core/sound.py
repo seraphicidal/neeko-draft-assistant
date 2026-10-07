@@ -25,23 +25,16 @@ from core.settings import CONFIG_DIR
 
 SOUNDS_DIR = CONFIG_DIR / "sounds"
 
-# What the file dialog offers. MP3 and WAV always work; the rest depend on the
-# codecs Windows has, and fall back to the built-in tones if one is missing.
 EXTENSIONS = (".mp3", ".wav", ".m4a", ".wma", ".aac", ".ogg", ".flac")
 FILE_FILTER = "Audio (*.mp3 *.wav *.m4a *.wma *.aac *.ogg *.flac)"
 
-# Big enough for any cue, small enough that a copy into the settings folder is
-# instant and a mis-picked video file is refused.
 MAX_BYTES = 20 * 1024 * 1024
 
-TONES = ((988, 90), (1319, 130))   # the default chime, in (hertz, milliseconds)
+TONES = ((988, 90), (1319, 130))
 
 
 class SoundError(Exception):
     """The file cannot be used as a cue, with a sentence saying why."""
-
-
-# -- the Windows side ------------------------------------------------------
 
 
 def _mci(command: str) -> bool:
@@ -51,7 +44,7 @@ def _mci(command: str) -> bool:
     try:
         buffer = ctypes.create_unicode_buffer(255)
         return ctypes.windll.winmm.mciSendStringW(command, buffer, 254, None) == 0
-    except Exception:  # a machine without winmm is a machine without a cue
+    except Exception:
         return False
 
 
@@ -64,11 +57,8 @@ def _tones() -> None:
 
         for hertz, milliseconds in TONES:
             winsound.Beep(hertz, milliseconds)
-    except Exception:  # a missing beep is not worth an error
+    except Exception:
         pass
-
-
-# -- choosing a file -------------------------------------------------------
 
 
 def _safe_name(name: str) -> str:
@@ -103,9 +93,6 @@ def install(source: str | Path) -> Path:
     return target
 
 
-# -- playing it ------------------------------------------------------------
-
-
 class Cue:
     """Plays the accept cue. One instance, one thread, one sound at a time."""
 
@@ -116,8 +103,6 @@ class Cue:
         self._thread: threading.Thread | None = None
         self._alias = "neekocue"
         self._holding = False
-
-    # -- what the app calls ------------------------------------------------
 
     def play(self, path: str | Path = "") -> None:
         """Play `path`, or the built-in chime when it is empty or unplayable."""
@@ -138,8 +123,6 @@ class Cue:
             self._send(f"close {self._alias}check")
         return opened
 
-    # -- the thread --------------------------------------------------------
-
     def _start(self) -> None:
         if self._thread is None:
             self._thread = threading.Thread(target=self._run, name="neeko-sound", daemon=True)
@@ -153,10 +136,8 @@ class Cue:
                 return
             try:
                 self.play_once(item)
-            except Exception:  # a cue is never worth taking the app down for
+            except Exception:
                 pass
-
-    # -- one cue -----------------------------------------------------------
 
     def play_once(self, path: str) -> bool:
         """True when the file played, False when the chime stood in for it.
