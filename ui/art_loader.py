@@ -1,0 +1,89 @@
+
+from __future__ import annotations
+
+import queue
+import threading
+import time
+
+from PySide6.QtCore import QObject, Signal
+
+from league import champion_art
+from league.lcu_client import ClientUnavailable, LcuClient, discover
+
+CLIENT_RETRY_SECONDS = 5.0
+
+
+class ArtLoader(QObject):
+
+    loaded = Signal(str, int, bytes)
+
+    def __init__(self, catalog, parent: QObject | None = None) -> None:
+        super().__init__(parent)
+        self.catalog = catalog
+        self._queue: queue.Queue = queue.Queue()
+        self._seen: set[tuple[str, int]] = set()
+        self._lock = threading.Lock()
+        self._stop = threading.Event()
+        self._client: LcuClient | None = None
+        self._client_retry_at = 0.0
+        self._thread: threading.Thread | None = None
+
+    def start(self) -> None:
+        if self._thread is not None:
+            return
+        self._thread = threading.Thread(target=self._run, name="neeko-art", daemon=True)
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stop.set()
+        self._queue.put(None)
+
+    def request(self, kind: str, champion_id: int) -> None:
+        champion_id = int(champion_id or 0)
+        if champion_id <= 0:
+            return
+        key = (kind, champion_id)
+        with self._lock:
+            if key in self._seen:
+                return
+            self._seen.add(key)
+        self._queue.put(key)
+
+    def forget(self, champion_id: int) -> None:
+        with self._lock:
+            self._seen = {key for key in self._seen if key[1] != champion_id}
+
+    def _lcu(self) -> LcuClient | None:
+        if self._client is not None:
+            return self._client
+        now = time.monotonic()
+        if now < self._client_retry_at:
+            return None
+        self._client_retry_at = now + CLIENT_RETRY_SECONDS
+        try:
+            self._client = LcuClient(discover())
+        except ClientUnavailable:
+            self._client = None
+        return self._client
+
+    def _run(self) -> None:
+        while not self._stop.is_set():
+            item = self._queue.get()
+            if item is None:
+                return
+            kind, champion_id = item
+            try:
+                data = champion_art.load(
+                    kind,
+                    champion_id,
+                    alias=self.catalog.alias_of(champion_id),
+                    version=self.catalog.version,
+                    client=self._lcu(),
+                )
+            except Exception:
+                data = None
+            if data:
+                self.loaded.emit(kind, champion_id, data)
+            else:
+                with self._lock:
+                    self._seen.discard((kind, champion_id))
