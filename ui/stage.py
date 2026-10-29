@@ -120,9 +120,10 @@ class DraftScene(QWidget):
         chips = QHBoxLayout()
         chips.setSpacing(theme.SPACE_2)
         self.declare_chip = Chip("Declare")
+        self.ban_chip = Chip("Ban")
         self.lock_chip = Chip("Lock in")
         self.chat_chip = Chip("Chat")
-        for chip in (self.declare_chip, self.lock_chip, self.chat_chip):
+        for chip in (self.declare_chip, self.ban_chip, self.lock_chip, self.chat_chip):
             chips.addWidget(chip)
         chips.addStretch(1)
         column.addLayout(chips)
@@ -147,6 +148,10 @@ class DraftScene(QWidget):
         self.declare_chip.set_state(
             "armed" if context.auto_declare else "off",
             done=bool(view.declared_champion),
+        )
+        self.ban_chip.set_state(
+            "armed" if context.auto_ban else "off",
+            done=view.state in ("WAITING_FOR_MY_TURN", "MY_TURN", "LOCKED") and view.turn != "BAN",
         )
         self.lock_chip.set_state("armed" if context.auto_pick else "off",
                                 done=view.state == "LOCKED")

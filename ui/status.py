@@ -184,6 +184,8 @@ def for_action(text: str) -> Reaction | None:
         return Reaction(f"Neeko hovered {text[len('Declared '):]}!", theme.ACCENT)
     if text.startswith("Locked in "):
         return Reaction(f"{text[len('Locked in '):]} locked in!", theme.SUCCESS)
+    if text.startswith("Banned "):
+        return Reaction(f"{text[len('Banned '):]} banned!", theme.ACCENT)
     return None
 
 
@@ -199,6 +201,9 @@ _REWRITES = {
     ),
     "Could not lock the champion in.": (
         "Couldn't lock your champion in. Please pick it yourself."
+    ),
+    "Could not ban the champion.": (
+        "Couldn't ban the champion. Please ban it yourself."
     ),
     "Could not send the draft message.": (
         "Couldn't send the draft message. Chat may not be ready yet."

@@ -67,14 +67,15 @@ class TrayTest(unittest.TestCase):
     def test_the_menu_offers_every_switch(self):
         labels = [action.text() for action in self.tray.contextMenu().actions()]
 
-        for expected in ("Auto Accept", "Auto Declare", "Auto Pick", "Auto Chat",
+        for expected in ("Auto Accept", "Auto Declare", "Auto Pick", "Auto Ban", "Auto Chat",
                          "Open App", "Settings", "Pause", "Exit"):
             self.assertIn(expected, labels)
 
     def test_toggling_a_menu_entry_reports_the_change(self):
         self.tray.accept_action.setChecked(False)
+        self.tray.ban_action.setChecked(True)
 
-        self.assertEqual(self.emitted, [("auto_accept", False)])
+        self.assertEqual(self.emitted, [("auto_accept", False), ("auto_ban", True)])
 
     def test_pause_emits_without_touching_settings(self):
         paused = []
@@ -87,11 +88,13 @@ class TrayTest(unittest.TestCase):
 
     def test_sync_mirrors_settings_without_bouncing_signals(self):
         self.settings.auto_pick = True
+        self.settings.auto_ban = True
         self.settings.chat_enabled = True
 
         self.tray.sync()
 
         self.assertTrue(self.tray.pick_action.isChecked())
+        self.assertTrue(self.tray.ban_action.isChecked())
         self.assertTrue(self.tray.chat_action.isChecked())
         self.assertEqual(self.emitted, [])
 

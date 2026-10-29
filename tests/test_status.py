@@ -103,6 +103,9 @@ class ReactionTest(unittest.TestCase):
     def test_a_lock_names_the_champion(self):
         self.assertIn("Ahri", status.for_action("Locked in Ahri").voice)
 
+    def test_a_ban_names_the_champion(self):
+        self.assertIn("Zed", status.for_action("Banned Zed").voice)
+
     def test_ordinary_messages_get_no_reaction(self):
         self.assertIsNone(status.for_action("League client connected"))
 

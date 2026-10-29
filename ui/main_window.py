@@ -678,6 +678,10 @@ class MainWindow(QWidget):
         return self.settings.auto_pick
 
     @property
+    def auto_ban(self) -> bool:
+        return getattr(self.settings, "auto_ban", False)
+
+    @property
     def chat_enabled(self) -> bool:
         return self.settings.chat_enabled
 

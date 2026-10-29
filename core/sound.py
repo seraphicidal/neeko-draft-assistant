@@ -88,8 +88,10 @@ class Cue:
         self._queue.put(str(path or ""))
 
     def stop(self) -> None:
-        if self._thread is not None:
+        if self._thread is not None and self._thread.is_alive():
             self._queue.put(None)
+            self._thread.join(timeout=1.0)
+        self._thread = None
 
     def playable(self, path: str | Path) -> bool:
         path = Path(path)
@@ -101,7 +103,7 @@ class Cue:
         return opened
 
     def _start(self) -> None:
-        if self._thread is None:
+        if self._thread is None or not self._thread.is_alive():
             self._thread = threading.Thread(target=self._run, name="neeko-sound", daemon=True)
             self._thread.start()
 

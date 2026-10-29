@@ -27,10 +27,6 @@ def shortcut_path() -> Path:
     return startup_dir() / f"{APP_NAME}.lnk"
 
 
-def is_enabled() -> bool:
-    return shortcut_path().exists()
-
-
 def _registry_command() -> str:
     target, arguments = launch_target()
     return f'"{target}" {arguments}'.strip()

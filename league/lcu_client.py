@@ -68,21 +68,26 @@ def _is_process_running(process_name: str) -> bool:
                 ("szExeFile", ctypes.c_wchar * 260),
             ]
 
-        snapshot = ctypes.windll.kernel32.CreateToolhelp32Snapshot(2, 0)
-        if snapshot in (-1, 0):
+        k32 = ctypes.windll.kernel32
+        k32.CreateToolhelp32Snapshot.restype = ctypes.wintypes.HANDLE
+        k32.CreateToolhelp32Snapshot.argtypes = [ctypes.wintypes.DWORD, ctypes.wintypes.DWORD]
+        k32.CloseHandle.argtypes = [ctypes.wintypes.HANDLE]
+        snapshot = k32.CreateToolhelp32Snapshot(2, 0)
+        invalid = ctypes.wintypes.HANDLE(-1).value
+        if snapshot in (-1, 0, invalid):
             return True
         entry = PROCESSENTRY32W()
         entry.dwSize = ctypes.sizeof(entry)
         found = False
         name_lower = process_name.lower()
-        if ctypes.windll.kernel32.Process32FirstW(snapshot, ctypes.byref(entry)):
+        if k32.Process32FirstW(snapshot, ctypes.byref(entry)):
             while True:
                 if entry.szExeFile.lower() == name_lower:
                     found = True
                     break
-                if not ctypes.windll.kernel32.Process32NextW(snapshot, ctypes.byref(entry)):
+                if not k32.Process32NextW(snapshot, ctypes.byref(entry)):
                     break
-        ctypes.windll.kernel32.CloseHandle(snapshot)
+        k32.CloseHandle(snapshot)
         return found
     except Exception:
         return True

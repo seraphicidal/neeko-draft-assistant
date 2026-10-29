@@ -89,6 +89,14 @@ class CueTest(TempFolderMixin, unittest.TestCase):
         self.assertFalse(self.cue.playable(self.folder / "nothing.mp3"))
         self.assertEqual(self.windows.commands, [])
 
+    def test_cue_can_play_after_stop(self):
+        self.cue.play(str(self.file))
+        self.cue.stop()
+        self.assertIsNone(self.cue._thread)
+        self.cue.play(str(self.file))
+        self.assertIsNotNone(self.cue._thread)
+        self.cue.stop()
+
 
 class InstallTest(TempFolderMixin, unittest.TestCase):
     def setUp(self):

@@ -37,6 +37,7 @@ class Tray(QSystemTrayIcon):
         self.accept_action = self._switch(menu, "Auto Accept", "auto_accept")
         self.declare_action = self._switch(menu, "Auto Declare", "auto_declare")
         self.pick_action = self._switch(menu, "Auto Pick", "auto_pick")
+        self.ban_action = self._switch(menu, "Auto Ban", "auto_ban")
         self.chat_action = self._switch(menu, "Auto Chat", "chat_enabled")
         menu.addSeparator()
 
@@ -82,6 +83,7 @@ class Tray(QSystemTrayIcon):
             (self.accept_action, "auto_accept"),
             (self.declare_action, "auto_declare"),
             (self.pick_action, "auto_pick"),
+            (self.ban_action, "auto_ban"),
             (self.chat_action, "chat_enabled"),
         ):
             wanted = bool(getattr(self.settings, attribute))

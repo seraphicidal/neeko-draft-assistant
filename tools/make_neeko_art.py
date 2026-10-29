@@ -130,10 +130,30 @@ def _fade(image: Image.Image, alpha: int) -> Image.Image:
 
 
 def icon() -> Image.Image:
+    portrait_path = NEEKO / "portrait.png"
     size = 1024
+    radius = int(size * 0.22)
     canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+
+    if portrait_path.exists():
+        portrait = Image.open(portrait_path).convert("RGBA")
+        mask = Image.new("L", (size, size), 0)
+        ImageDraw.Draw(mask).rounded_rectangle(
+            [0, 0, size - 1, size - 1], radius=radius, fill=255
+        )
+        fitted = portrait.resize((size, size), Image.LANCZOS)
+        canvas.paste(fitted, (0, 0), mask)
+
+        border = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+        bdraw = ImageDraw.Draw(border)
+        bdraw.rounded_rectangle(
+            [2, 2, size - 3, size - 3], radius=radius, outline=ORANGE + (220,), width=10
+        )
+        canvas.alpha_composite(border)
+        return canvas
+
     draw = ImageDraw.Draw(canvas)
-    draw.rounded_rectangle([0, 0, size - 1, size - 1], radius=int(size * 0.22), fill=NAVY_UP + (255,))
+    draw.rounded_rectangle([0, 0, size - 1, size - 1], radius=radius, fill=NAVY_UP + (255,))
 
     glow = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     ImageDraw.Draw(glow).ellipse(

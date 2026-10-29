@@ -192,7 +192,7 @@ def install(installer: Path) -> None:
     try:
         if sys.platform == "win32":
             switches = " ".join(INSTALL_SWITCHES)
-            cmd = f'cmd.exe /c "timeout /t 1 /nobreak >nul & "{installer_path}" {switches}"'
+            cmd = f'cmd.exe /c "ping 127.0.0.1 -n 2 >nul & "{installer_path}" {switches}"'
             subprocess.Popen(
                 cmd,
                 creationflags=CREATE_NO_WINDOW | getattr(subprocess, "DETACHED_PROCESS", 0),
