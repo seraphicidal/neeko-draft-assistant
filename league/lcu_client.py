@@ -47,12 +47,67 @@ class Credentials:
         return f"https://127.0.0.1:{self.port}"
 
 
+def _is_process_running(process_name: str) -> bool:
+    if sys.platform != "win32":
+        return False
+    try:
+        import ctypes
+        import ctypes.wintypes
+
+        class PROCESSENTRY32W(ctypes.Structure):
+            _fields_ = [
+                ("dwSize", ctypes.wintypes.DWORD),
+                ("cntUsage", ctypes.wintypes.DWORD),
+                ("th32ProcessID", ctypes.wintypes.DWORD),
+                ("th32DefaultHeapID", ctypes.c_size_t),
+                ("th32ModuleID", ctypes.wintypes.DWORD),
+                ("cntThreads", ctypes.wintypes.DWORD),
+                ("th32ParentProcessID", ctypes.wintypes.DWORD),
+                ("pcPriClassBase", ctypes.c_long),
+                ("dwFlags", ctypes.wintypes.DWORD),
+                ("szExeFile", ctypes.c_wchar * 260),
+            ]
+
+        snapshot = ctypes.windll.kernel32.CreateToolhelp32Snapshot(2, 0)
+        if snapshot in (-1, 0):
+            return True
+        entry = PROCESSENTRY32W()
+        entry.dwSize = ctypes.sizeof(entry)
+        found = False
+        name_lower = process_name.lower()
+        if ctypes.windll.kernel32.Process32FirstW(snapshot, ctypes.byref(entry)):
+            while True:
+                if entry.szExeFile.lower() == name_lower:
+                    found = True
+                    break
+                if not ctypes.windll.kernel32.Process32NextW(snapshot, ctypes.byref(entry)):
+                    break
+        ctypes.windll.kernel32.CloseHandle(snapshot)
+        return found
+    except Exception:
+        return True
+
+
 def _install_dir_from_metadata() -> Path | None:
     try:
         match = _YAML_PATH_RE.search(_PRODUCT_SETTINGS.read_text(encoding="utf-8", errors="ignore"))
     except OSError:
         return None
     return Path(match.group(1)) if match else None
+
+
+def _candidate_install_dirs() -> list[Path]:
+    candidates = []
+    meta = _install_dir_from_metadata()
+    if meta:
+        candidates.append(meta)
+    candidates.append(_DEFAULT_INSTALL)
+    if sys.platform == "win32":
+        for letter in ("D", "E", "F", "G"):
+            candidate = Path(f"{letter}:/Riot Games/League of Legends")
+            if candidate not in candidates:
+                candidates.append(candidate)
+    return candidates
 
 
 def credentials_from_lockfile(install_dir: str | Path) -> Credentials:
@@ -67,6 +122,9 @@ def credentials_from_lockfile(install_dir: str | Path) -> Credentials:
 
 
 def credentials_from_process() -> Credentials:
+    if sys.platform == "win32" and not _is_process_running("LeagueClientUx.exe"):
+        raise ClientUnavailable("LeagueClientUx.exe is not running")
+
     try:
         proc = subprocess.run(
             ["powershell", "-NoProfile", "-NonInteractive", "-Command", _PS_COMMAND],
@@ -93,7 +151,9 @@ def credentials_from_process() -> Credentials:
 
 
 def discover(known_install_dir: str | Path | None = None) -> Credentials:
-    for candidate in (known_install_dir, _install_dir_from_metadata(), _DEFAULT_INSTALL):
+    candidates = [known_install_dir] if known_install_dir else []
+    candidates.extend(_candidate_install_dirs())
+    for candidate in candidates:
         if not candidate:
             continue
         try:

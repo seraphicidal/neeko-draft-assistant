@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import asdict, dataclass, fields
+from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 
 APP_DIR_NAME = "NeekoDraftAssistant"
@@ -27,10 +27,20 @@ class Settings:
 
     auto_declare: bool = True
     auto_pick: bool = False
+    lock_delay: float = 0.0
     preferred_champion_id: int = 0
     preferred_champion_name: str = ""
     backup_champion_id: int = 0
     backup_champion_name: str = ""
+
+    auto_ban: bool = False
+    preferred_ban_champion_id: int = 0
+    preferred_ban_champion_name: str = ""
+    backup_ban_champion_id: int = 0
+    backup_ban_champion_name: str = ""
+
+    respect_ally_hover: bool = True
+    role_champions: dict = field(default_factory=dict)
 
     chat_enabled: bool = False
     chat_message: str = "hello gl hf"
@@ -43,6 +53,7 @@ class Settings:
 
     accepted_total: int = 0
     picks_total: int = 0
+    bans_total: int = 0
 
     @classmethod
     def load(cls, path: Path | None = None, legacy_path: Path | None = None) -> "Settings":
@@ -88,12 +99,18 @@ class Settings:
 
     def normalise(self) -> None:
         self.accept_delay = min(max(float(self.accept_delay), 0.0), MAX_DELAY)
+        self.lock_delay = min(max(float(self.lock_delay), 0.0), MAX_DELAY)
         self.preferred_champion_id = max(0, int(self.preferred_champion_id))
         self.backup_champion_id = max(0, int(self.backup_champion_id))
+        self.preferred_ban_champion_id = max(0, int(self.preferred_ban_champion_id))
+        self.backup_ban_champion_id = max(0, int(self.backup_ban_champion_id))
         self.chat_message = str(self.chat_message)[:MAX_MESSAGE]
         self.sound_file = str(self.sound_file)
         self.accepted_total = max(0, int(self.accepted_total))
         self.picks_total = max(0, int(self.picks_total))
+        self.bans_total = max(0, int(self.bans_total))
+        if not isinstance(self.role_champions, dict):
+            self.role_champions = {}
 
     def save(self, path: Path | None = None) -> bool:
         config_file = path or CONFIG_FILE
@@ -137,6 +154,8 @@ def _coerce(annotation, value):
         return float(value)
     if "int" in text:
         return int(value)
+    if "dict" in text:
+        return dict(value) if isinstance(value, dict) else {}
     return str(value)
 
 

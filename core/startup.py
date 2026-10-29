@@ -31,36 +31,49 @@ def is_enabled() -> bool:
     return shortcut_path().exists()
 
 
-def _ps_literal(value) -> str:
-    return "'" + str(value).replace("'", "''") + "'"
+def _registry_command() -> str:
+    target, arguments = launch_target()
+    return f'"{target}" {arguments}'.strip()
+
+
+def is_enabled() -> bool:
+    if shortcut_path().exists():
+        return True
+    if sys.platform != "win32":
+        return False
+    try:
+        import winreg
+
+        with winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER,
+            r"Software\Microsoft\Windows\CurrentVersion\Run",
+            0,
+            winreg.KEY_READ,
+        ) as key:
+            winreg.QueryValueEx(key, APP_NAME)
+            return True
+    except (OSError, FileNotFoundError):
+        return False
 
 
 def enable() -> bool:
-    target, arguments = launch_target()
-    script = "; ".join(
-        [
-            "$shell = New-Object -ComObject WScript.Shell",
-            f"$link = $shell.CreateShortcut({_ps_literal(shortcut_path())})",
-            f"$link.TargetPath = {_ps_literal(target)}",
-            f"$link.Arguments = {_ps_literal(arguments)}",
-            f"$link.WorkingDirectory = {_ps_literal(program_dir())}",
-            f"$link.IconLocation = {_ps_literal(_ICON)}",
-            f"$link.Description = {_ps_literal('Neeko draft assistant for League of Legends')}",
-            "$link.Save()",
-        ]
-    )
-    try:
-        startup_dir().mkdir(parents=True, exist_ok=True)
-        subprocess.run(
-            ["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
-            capture_output=True,
-            text=True,
-            timeout=20,
-            creationflags=CREATE_NO_WINDOW,
-        )
-    except (OSError, subprocess.SubprocessError):
+    if sys.platform != "win32":
         return False
-    return is_enabled()
+    try:
+        import winreg
+
+        with winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER,
+            r"Software\Microsoft\Windows\CurrentVersion\Run",
+            0,
+            winreg.KEY_SET_VALUE,
+        ) as key:
+            winreg.SetValueEx(key, APP_NAME, 0, winreg.REG_SZ, _registry_command())
+        shortcut_path().unlink(missing_ok=True)
+        (startup_dir() / f"{LEGACY_NAME}.lnk").unlink(missing_ok=True)
+        return is_enabled()
+    except OSError:
+        return False
 
 
 def disable() -> bool:
@@ -68,8 +81,25 @@ def disable() -> bool:
         shortcut_path().unlink(missing_ok=True)
         (startup_dir() / f"{LEGACY_NAME}.lnk").unlink(missing_ok=True)
     except OSError:
+        pass
+    if sys.platform != "win32":
+        return True
+    try:
+        import winreg
+
+        with winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER,
+            r"Software\Microsoft\Windows\CurrentVersion\Run",
+            0,
+            winreg.KEY_SET_VALUE,
+        ) as key:
+            try:
+                winreg.DeleteValue(key, APP_NAME)
+            except FileNotFoundError:
+                pass
+        return not is_enabled()
+    except OSError:
         return False
-    return not is_enabled()
 
 
 def set_enabled(enabled: bool) -> bool:

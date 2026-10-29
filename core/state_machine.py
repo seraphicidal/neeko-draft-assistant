@@ -31,6 +31,7 @@ class IntentKind(str, Enum):
     ACCEPT_READY_CHECK = "ACCEPT_READY_CHECK"
     DECLARE_CHAMPION = "DECLARE_CHAMPION"
     LOCK_CHAMPION = "LOCK_CHAMPION"
+    BAN_CHAMPION = "BAN_CHAMPION"
     SEND_CHAT = "SEND_CHAT"
 
 
@@ -106,6 +107,7 @@ class StateMachine:
         self._pop_timer = 0.0
         self._session_identity = ""
         self._declared_champion = 0
+        self._pick_turn_seen_at: float | None = None
         self._attempts: dict[IntentKind, _Attempts] = {}
         self._reset_queue()
         self._reset_draft("")
@@ -121,7 +123,13 @@ class StateMachine:
     def _reset_draft(self, identity: str) -> None:
         self._session_identity = identity
         self._declared_champion = 0
-        for kind in (IntentKind.DECLARE_CHAMPION, IntentKind.LOCK_CHAMPION, IntentKind.SEND_CHAT):
+        self._pick_turn_seen_at = None
+        for kind in (
+            IntentKind.DECLARE_CHAMPION,
+            IntentKind.LOCK_CHAMPION,
+            IntentKind.BAN_CHAMPION,
+            IntentKind.SEND_CHAT,
+        ):
             self._attempts[kind] = _Attempts()
 
     def record_result(self, intent: Intent, succeeded: bool, now: float) -> None:
@@ -196,6 +204,12 @@ class StateMachine:
 
         waited = snapshot.now - self._pop_seen_at
         remaining = settings.accept_delay - waited
+        if pop.timer >= 8.5 and pop.timer > 0.0 and attempt.allow(snapshot.now):
+            return Decision(
+                AppState.READY_CHECK,
+                intents=(Intent(IntentKind.ACCEPT_READY_CHECK),),
+                detail="Accepting...",
+            )
         if remaining > 0:
             return Decision(
                 AppState.READY_CHECK,
@@ -264,22 +278,35 @@ class StateMachine:
     def _champion_intents(
         self, snapshot: Snapshot, settings, session: cs.Session, problems: list[str]
     ) -> list[Intent]:
+        intents: list[Intent] = []
+
+        if getattr(settings, "auto_ban", False) and session.is_my_ban_turn:
+            ban_action = session.my_ban_action
+            if ban_action is not None and not ban_action.completed:
+                ban_champion_id, ban_problem = self._choose_ban_champion(session, settings)
+                if ban_champion_id:
+                    attempt = self._attempt(IntentKind.BAN_CHAMPION)
+                    if attempt.exhausted:
+                        problems.append("Could not ban the champion.")
+                    elif attempt.allow(snapshot.now):
+                        intents.append(Intent(IntentKind.BAN_CHAMPION, ban_champion_id, ban_action.id))
+                elif ban_problem:
+                    problems.append(ban_problem)
+
         if not (settings.auto_declare or settings.auto_pick):
-            return []
+            return intents
         if session.has_locked:
-            return []
+            return intents
 
         action = session.my_pick_action
         if action is None:
-            return []
+            return intents
 
         champion_id, problem = self._choose_champion(session, snapshot.pickable, settings)
         if not champion_id:
             if problem:
                 problems.append(problem)
-            return []
-
-        intents: list[Intent] = []
+            return intents
 
         if settings.auto_declare and self._declared_champion != champion_id:
             attempt = self._attempt(IntentKind.DECLARE_CHAMPION)
@@ -292,33 +319,83 @@ class StateMachine:
                     Intent(IntentKind.DECLARE_CHAMPION, champion_id, action.id)
                 )
 
-        if settings.auto_pick and session.is_my_pick_turn:
-            attempt = self._attempt(IntentKind.LOCK_CHAMPION)
-            if attempt.exhausted:
-                problems.append("Could not lock the champion in.")
-            elif attempt.allow(snapshot.now):
-                intents.append(Intent(IntentKind.LOCK_CHAMPION, champion_id, action.id))
+        if session.is_my_pick_turn:
+            if self._pick_turn_seen_at is None:
+                self._pick_turn_seen_at = snapshot.now
+            lock_delay = getattr(settings, "lock_delay", 0.0) or 0.0
+            waited = snapshot.now - self._pick_turn_seen_at
+            time_low = session.time_left > 0.0 and session.time_left <= 3.0
+            can_lock = waited >= lock_delay or time_low
+
+            if settings.auto_pick and can_lock:
+                attempt = self._attempt(IntentKind.LOCK_CHAMPION)
+                if attempt.exhausted:
+                    problems.append("Could not lock the champion in.")
+                elif attempt.allow(snapshot.now):
+                    intents.append(Intent(IntentKind.LOCK_CHAMPION, champion_id, action.id))
+        else:
+            self._pick_turn_seen_at = None
 
         return intents
 
     def _choose_champion(self, session: cs.Session, pickable, settings) -> tuple[int, str]:
-        wanted = [
+        wanted = []
+        role = getattr(session, "assigned_position", "").lower()
+        role_champs = getattr(settings, "role_champions", {}) or {}
+        if role and role in role_champs:
+            pref = role_champs[role].get("preferred_champion_id", 0)
+            back = role_champs[role].get("backup_champion_id", 0)
+            if pref:
+                wanted.append(("Role preferred", int(pref)))
+            if back:
+                wanted.append(("Role backup", int(back)))
+
+        wanted.extend([
             ("Preferred", int(getattr(settings, "preferred_champion_id", 0) or 0)),
             ("Backup", int(getattr(settings, "backup_champion_id", 0) or 0)),
-        ]
+        ])
         if not any(champion_id for _, champion_id in wanted):
             return 0, "No champion picked yet."
 
         taken = session.taken_champion_ids
+        respect_hover = getattr(settings, "respect_ally_hover", True)
+        ally_hovered = getattr(session, "ally_hovered", frozenset())
         blocked = ""
-        for role, champion_id in wanted:
+        for role_name, champion_id in wanted:
             if not champion_id:
                 continue
             if champion_id in taken:
-                blocked = blocked or f"{role} champion is banned or already taken."
+                blocked = blocked or f"{role_name} champion is banned or already taken."
+                continue
+            if respect_hover and champion_id in ally_hovered:
+                blocked = blocked or f"{role_name} champion is hovered by an ally."
                 continue
             if pickable and champion_id not in pickable:
-                blocked = blocked or f"{role} champion is not available to pick."
+                blocked = blocked or f"{role_name} champion is not available to pick."
                 continue
             return champion_id, ""
         return 0, blocked or "No champion available."
+
+    def _choose_ban_champion(self, session: cs.Session, settings) -> tuple[int, str]:
+        wanted = [
+            ("Preferred", int(getattr(settings, "preferred_ban_champion_id", 0) or 0)),
+            ("Backup", int(getattr(settings, "backup_ban_champion_id", 0) or 0)),
+        ]
+        if not any(champion_id for _, champion_id in wanted):
+            return 0, "No ban champion selected."
+
+        taken = session.taken_champion_ids
+        respect_hover = getattr(settings, "respect_ally_hover", True)
+        ally_hovered = getattr(session, "ally_hovered", frozenset())
+        blocked = ""
+        for role_name, champion_id in wanted:
+            if not champion_id:
+                continue
+            if champion_id in taken:
+                blocked = blocked or f"{role_name} ban is already taken."
+                continue
+            if respect_hover and champion_id in ally_hovered:
+                blocked = blocked or f"{role_name} ban is hovered by an ally to play."
+                continue
+            return champion_id, ""
+        return 0, blocked or "No ban available."

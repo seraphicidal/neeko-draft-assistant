@@ -12,7 +12,7 @@ from PySide6.QtWidgets import QApplication
 from core import updater
 from core.logbook import LogBook
 from core.sound import Cue
-from core.settings import Settings
+from core.settings import CONFIG_DIR, Settings
 from core.version import APP_NAME, GITHUB_URL, __version__
 from core.watcher import Watcher
 from league.champions import Catalog
@@ -43,7 +43,7 @@ class Application:
         self.qt.setQuitOnLastWindowClosed(False)
 
         self.settings = Settings.load()
-        self.log = LogBook()
+        self.log = LogBook(file_path=CONFIG_DIR / "logs" / "app.log")
         self.log.debug_enabled = self.settings.debug_logging
         self.catalog = Catalog.bundled()
 
@@ -66,6 +66,8 @@ class Application:
 
         self.settings_window: SettingsWindow | None = None
         self.pending_update = None
+        self._pending_installer = None
+        self._installing = False
         self._checking = False
 
         self.tray = Tray(self.settings)
@@ -126,6 +128,10 @@ class Application:
             status = payload["status"]
             self.window.apply_status(status)
             self.tray.set_status(status.connected, status.detail)
+            if self._pending_installer and not updater.is_busy(self.busy_state) and not self._installing:
+                path = self._pending_installer
+                self._pending_installer = None
+                self._apply_installer(path)
         elif kind == "action":
             self.window.show_action(payload["text"], payload["level"])
             if payload.get("notify"):
@@ -226,15 +232,15 @@ class Application:
         release = self.pending_update
         if release is None:
             return
-        if updater.is_busy(self.busy_state):
-            self.window.update_progress("Neeko will wait until you're out of the game.")
-            return
         if not updater.running_as_installed_app():
             webbrowser.open(f"{GITHUB_URL}/releases/latest")
             self.window.update_progress("Opened the release page in your browser.")
             return
 
-        self.window.update_progress(f"Downloading version {release.version}...")
+        if updater.is_busy(self.busy_state):
+            self.window.update_progress(f"Downloading version {release.version} (will install after game)...")
+        else:
+            self.window.update_progress(f"Downloading version {release.version}...")
 
         def work() -> None:
             try:
@@ -251,11 +257,17 @@ class Application:
             self.window.update_progress(f"Update failed: {error}")
             return
         if updater.is_busy(self.busy_state):
+            self._pending_installer = path
             self.window.update_progress("Update ready - Neeko will wait until after the game.")
             return
+        self._apply_installer(path)
+
+    def _apply_installer(self, path) -> None:
+        self._installing = True
         try:
             updater.install(path)
         except updater.UpdateError as exc:
+            self._installing = False
             self.window.update_progress(f"Update failed: {exc}")
             return
         self.log.add("info", "Handing over to the installer")

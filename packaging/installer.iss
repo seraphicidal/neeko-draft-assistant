@@ -64,7 +64,14 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopico
 Name: "{userstartup}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: startup
 
 [Run]
-Filename: "{app}\{#AppExe}"; Description: "Start {#AppName}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#AppExe}"; Description: "Start {#AppName}"; Flags: nowait postinstall skipifsilent; Check: not IsSilent
+Filename: "{app}\{#AppExe}"; Flags: nowait; Check: IsSilent
+
+[Code]
+function IsSilent: Boolean;
+begin
+  Result := WizardSilent;
+end;
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{localappdata}\NeekoDraftAssistant\champions"

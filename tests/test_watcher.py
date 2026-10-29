@@ -286,6 +286,24 @@ class DraftTest(WatcherTestCase):
         self.assertEqual(client.count("PATCH", "/actions/5"), 0)
         self.assertTrue(self.statuses()[-1].problem)
 
+    def test_bans_the_champion_on_ban_turn(self):
+        client = FakeLcu(
+            {
+                gameflow.ENDPOINT: (200, "ChampSelect"),
+                cs.SESSION: (200, session_payload(local_cell=2, actions=[[action(1, cell=2, kind="ban", in_progress=True)]])),
+                cs.PICKABLE: (200, [NEEKO, AHRI]),
+                ("PATCH", cs.ACTION.format(action_id=1)): (204, None),
+            }
+        )
+        watcher, settings = self.build(client, auto_ban=True, preferred_ban_champion_id=AHRI)
+        step(watcher)
+        step(watcher)
+
+        self.assertEqual(
+            client.payloads("PATCH", "/actions/1"), [{"championId": AHRI, "completed": True}]
+        )
+        self.assertEqual(settings.bans_total, 1)
+
 
 if __name__ == "__main__":
     unittest.main()

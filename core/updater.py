@@ -153,6 +153,7 @@ def download(release: Release, directory: Path | None = None, progress=None) -> 
         raise UpdateError("Nowhere to put the download") from exc
 
     destination = target_dir / f"NeekoDraftAssistant-{release.version}{INSTALLER_SUFFIX}"
+    part_file = destination.with_suffix(".part")
     request = urllib.request.Request(
         release.installer_url, headers={"User-Agent": "NeekoDraftAssistant"}
     )
@@ -160,7 +161,7 @@ def download(release: Release, directory: Path | None = None, progress=None) -> 
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
             total = release.size or int(response.headers.get("Content-Length") or 0)
-            with open(destination, "wb") as handle:
+            with open(part_file, "wb") as handle:
                 while True:
                     chunk = response.read(256 * 1024)
                     if not chunk:
@@ -171,25 +172,37 @@ def download(release: Release, directory: Path | None = None, progress=None) -> 
                     handle.write(chunk)
                     if progress is not None and total:
                         progress(min(1.0, written / total))
+        if release.size and written != release.size:
+            raise UpdateError("The download came back the wrong size")
+        os.replace(part_file, destination)
     except UpdateError:
+        part_file.unlink(missing_ok=True)
         raise
     except (urllib.error.URLError, OSError) as exc:
+        part_file.unlink(missing_ok=True)
         raise UpdateError("The download failed") from exc
 
-    if release.size and written != release.size:
-        raise UpdateError("The download came back the wrong size")
     return destination
 
 
 def install(installer: Path) -> None:
-    if not Path(installer).exists():
+    installer_path = Path(installer).resolve()
+    if not installer_path.exists():
         raise UpdateError("The downloaded installer is missing")
     try:
-        subprocess.Popen(
-            [str(installer), *INSTALL_SWITCHES],
-            creationflags=CREATE_NO_WINDOW | getattr(subprocess, "DETACHED_PROCESS", 0),
-            close_fds=True,
-        )
+        if sys.platform == "win32":
+            switches = " ".join(INSTALL_SWITCHES)
+            cmd = f'cmd.exe /c "timeout /t 1 /nobreak >nul & "{installer_path}" {switches}"'
+            subprocess.Popen(
+                cmd,
+                creationflags=CREATE_NO_WINDOW | getattr(subprocess, "DETACHED_PROCESS", 0),
+                close_fds=True,
+            )
+        else:
+            subprocess.Popen(
+                [str(installer_path), *INSTALL_SWITCHES],
+                close_fds=True,
+            )
     except OSError as exc:
         raise UpdateError("Windows would not start the installer") from exc
 

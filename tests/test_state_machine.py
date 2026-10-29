@@ -502,5 +502,117 @@ class TransitionTest(unittest.TestCase):
         self.assertEqual(kinds(back), [IntentKind.DECLARE_CHAMPION])
 
 
+class BanAndDelayTest(unittest.TestCase):
+    def test_auto_ban_bans_preferred_champion(self):
+        machine = StateMachine()
+        session = draft(local_cell=2, actions=[[action(1, cell=2, kind="ban", in_progress=True)]])
+        settings = FakeSettings(auto_ban=True, preferred_ban_champion_id=AHRI)
+
+        decision = machine.decide(snap(session=session), settings)
+
+        self.assertIn(IntentKind.BAN_CHAMPION, kinds(decision))
+        ban_intent = next(intent for intent in decision.intents if intent.kind == IntentKind.BAN_CHAMPION)
+        self.assertEqual(ban_intent.champion_id, AHRI)
+
+    def test_auto_ban_falls_back_to_backup_if_preferred_taken(self):
+        machine = StateMachine()
+        session = draft(
+            local_cell=2,
+            actions=[
+                [action(0, cell=5, kind="ban", champion=AHRI, completed=True)],
+                [action(1, cell=2, kind="ban", in_progress=True)],
+            ],
+        )
+        settings = FakeSettings(
+            auto_ban=True, preferred_ban_champion_id=AHRI, backup_ban_champion_id=LUX
+        )
+
+        decision = machine.decide(snap(session=session), settings)
+
+        self.assertIn(IntentKind.BAN_CHAMPION, kinds(decision))
+        ban_intent = next(intent for intent in decision.intents if intent.kind == IntentKind.BAN_CHAMPION)
+        self.assertEqual(ban_intent.champion_id, LUX)
+
+    def test_respect_ally_hover_skips_champion(self):
+        machine = StateMachine()
+        session = cs.Session(
+            local_cell_id=2,
+            actions=(
+                cs.Action.parse(action(5, cell=2, in_progress=True)),
+            ),
+            phase="BAN_PICK",
+            time_left=30.0,
+            pick_intent=0,
+            chat_id="room-1",
+            identity="room-1",
+            assigned_position="middle",
+            ally_hovered=frozenset({NEEKO}),
+        )
+        settings = FakeSettings(
+            preferred_champion_id=NEEKO,
+            backup_champion_id=AHRI,
+            respect_ally_hover=True,
+            auto_pick=True,
+        )
+
+        decision = machine.decide(snap(session=session), settings)
+
+        pick_intent = next(intent for intent in decision.intents if intent.kind == IntentKind.LOCK_CHAMPION)
+        self.assertEqual(pick_intent.champion_id, AHRI)
+
+    def test_lock_delay_waits_before_locking(self):
+        machine = StateMachine()
+        session = draft(local_cell=2, actions=[[action(5, cell=2, in_progress=True)]], time_left_ms=25000)
+        settings = FakeSettings(preferred_champion_id=NEEKO, auto_pick=True, lock_delay=3.0)
+
+        early = machine.decide(snap(now=10.0, session=session), settings)
+        self.assertNotIn(IntentKind.LOCK_CHAMPION, kinds(early))
+        self.assertIn(IntentKind.DECLARE_CHAMPION, kinds(early))
+
+        late = machine.decide(snap(now=13.5, session=session), settings)
+        self.assertIn(IntentKind.LOCK_CHAMPION, kinds(late))
+
+    def test_emergency_lock_when_time_low(self):
+        machine = StateMachine()
+        session = draft(local_cell=2, actions=[[action(5, cell=2, in_progress=True)]], time_left_ms=2000)
+        settings = FakeSettings(preferred_champion_id=NEEKO, auto_pick=True, lock_delay=5.0)
+
+        decision = machine.decide(snap(now=10.0, session=session), settings)
+        self.assertIn(IntentKind.LOCK_CHAMPION, kinds(decision))
+
+    def test_role_champions_preferred_over_generic(self):
+        machine = StateMachine()
+        session = cs.Session(
+            local_cell_id=2,
+            actions=(
+                cs.Action.parse(action(5, cell=2, in_progress=True)),
+            ),
+            phase="BAN_PICK",
+            time_left=30.0,
+            pick_intent=0,
+            chat_id="room-1",
+            identity="room-1",
+            assigned_position="top",
+            ally_hovered=frozenset(),
+        )
+        settings = FakeSettings(
+            preferred_champion_id=NEEKO,
+            role_champions={"top": {"preferred_champion_id": LUX, "backup_champion_id": AHRI}},
+            auto_pick=True,
+        )
+
+        decision = machine.decide(snap(session=session), settings)
+
+        pick_intent = next(intent for intent in decision.intents if intent.kind == IntentKind.LOCK_CHAMPION)
+        self.assertEqual(pick_intent.champion_id, LUX)
+
+    def test_emergency_accept_when_timer_late(self):
+        machine = StateMachine()
+        settings = FakeSettings(auto_accept=True, accept_delay=10.0)
+
+        decision = machine.decide(snap(now=1.0, ready_check=pop(timer=9.0)), settings)
+        self.assertIn(IntentKind.ACCEPT_READY_CHECK, kinds(decision))
+
+
 if __name__ == "__main__":
     unittest.main()

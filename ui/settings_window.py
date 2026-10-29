@@ -247,8 +247,32 @@ class SettingsWindow(QDialog):
                   "Hover your champion so the team can see it. Commits to nothing.",
                   "auto_declare")
         self._row(column, "Auto lock-in",
-                  "Lock the pick in the moment it becomes yours. This cannot be undone.",
+                  "Lock the pick in when it becomes yours.",
                   "auto_pick")
+        self._row(column, "Auto ban",
+                  "Automatically ban your selected ban champion during the ban phase.",
+                  "auto_ban")
+        self._row(column, "Respect ally hovers",
+                  "Do not pick or ban a champion that an ally is hovering to play.",
+                  "respect_ally_hover")
+
+        column.addSpacing(theme.SPACE_3)
+        head = QHBoxLayout()
+        head.addWidget(text("Lock-in delay", "body-strong"), 1)
+        self.lock_delay_value = text("", "accent")
+        head.addWidget(self.lock_delay_value)
+        column.addLayout(head)
+
+        self.lock_delay_slider = Slider(getattr(self.settings, "lock_delay", 0.0), MAX_DELAY, 0.5)
+        self.lock_delay_slider.valueChanged.connect(self._on_lock_delay)
+        column.addWidget(self.lock_delay_slider)
+
+        scale = QHBoxLayout()
+        scale.addWidget(text("0s (instant)", "small"))
+        scale.addStretch(1)
+        scale.addWidget(text(f"{MAX_DELAY:.0f}s", "small"))
+        column.addLayout(scale)
+        self._render_lock_delay(getattr(self.settings, "lock_delay", 0.0))
 
         column.addSpacing(theme.SPACE_3)
         column.addWidget(caption("Chosen champions"))
@@ -258,6 +282,14 @@ class SettingsWindow(QDialog):
         column.addWidget(text("Pick them on the dashboard.", "small"))
         column.addStretch(1)
         return page
+
+    def _on_lock_delay(self, value: float) -> None:
+        self.settings.lock_delay = float(value)
+        self._render_lock_delay(value)
+        self._save()
+
+    def _render_lock_delay(self, value: float) -> None:
+        self.lock_delay_value.setText(f"{value:.1f}s")
 
     def _page_chat(self) -> QWidget:
         page, column = self._page("Draft chat", "One line, once per champion select.")
@@ -511,10 +543,13 @@ class SettingsWindow(QDialog):
         self._building = True
         preferred = self.settings.preferred_champion_name or "nobody yet"
         backup = self.settings.backup_champion_name or "none"
-        self.champion_summary.setText(f"Primary: {preferred}\nBackup: {backup}")
+        ban = getattr(self.settings, "preferred_ban_champion_name", "") or "none"
+        self.champion_summary.setText(f"Primary: {preferred}\nBackup: {backup}\nBan: {ban}")
         self.message_edit.setText(self.settings.chat_message)
         self.delay_slider.setValue(self.settings.accept_delay)
         self._render_delay(self.settings.accept_delay)
+        self.lock_delay_slider.setValue(getattr(self.settings, "lock_delay", 0.0))
+        self._render_lock_delay(getattr(self.settings, "lock_delay", 0.0))
         self.level_box.setCurrentIndex(1 if self.settings.debug_logging else 0)
         self.sound_row.setChecked(self.settings.sound)
         self._render_sound()

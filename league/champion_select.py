@@ -50,6 +50,8 @@ class Session:
     pick_intent: int
     chat_id: str
     identity: str = field(compare=False, default="")
+    assigned_position: str = ""
+    ally_hovered: frozenset[int] = frozenset()
 
     @property
     def my_pick_action(self) -> Action | None:
@@ -112,10 +114,20 @@ class Session:
         time_left = max(0.0, float(timer.get("adjustedTimeLeftInPhase") or 0.0) / 1000.0)
 
         pick_intent = 0
+        assigned_position = ""
+        ally_hovered = set()
         for member in raw.get("myTeam") or []:
-            if isinstance(member, dict) and int(member.get("cellId", -1)) == local_cell_id:
-                pick_intent = int(member.get("championPickIntent") or 0)
-                break
+            if not isinstance(member, dict):
+                continue
+            cell_id = int(member.get("cellId", -1))
+            intent = int(member.get("championPickIntent") or 0)
+            if cell_id == local_cell_id:
+                pick_intent = intent
+                assigned_position = str(
+                    member.get("assignedPosition") or member.get("selectedPosition") or ""
+                ).lower()
+            elif intent > 0:
+                ally_hovered.add(intent)
 
         chat_id = str((raw.get("chatDetails") or {}).get("multiUserChatId") or "")
 
@@ -131,6 +143,8 @@ class Session:
             pick_intent=pick_intent,
             chat_id=chat_id,
             identity=identity,
+            assigned_position=assigned_position,
+            ally_hovered=frozenset(ally_hovered),
         )
 
 
@@ -154,6 +168,13 @@ def declare(client: LcuClient, action_id: int, champion_id: int) -> bool:
 
 
 def lock(client: LcuClient, action_id: int, champion_id: int) -> bool:
+    status, _ = client.patch(
+        ACTION.format(action_id=action_id), {"championId": champion_id, "completed": True}
+    )
+    return ok(status)
+
+
+def ban(client: LcuClient, action_id: int, champion_id: int) -> bool:
     status, _ = client.patch(
         ACTION.format(action_id=action_id), {"championId": champion_id, "completed": True}
     )

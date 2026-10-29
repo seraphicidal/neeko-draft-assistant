@@ -23,7 +23,7 @@ CHAT_LOOKUP_INTERVAL = 1.0
 
 class _Paused:
 
-    AUTOMATIC = ("auto_accept", "auto_declare", "auto_pick", "chat_enabled")
+    AUTOMATIC = ("auto_accept", "auto_declare", "auto_pick", "auto_ban", "chat_enabled")
 
     def __init__(self, settings) -> None:
         self._settings = settings
@@ -316,6 +316,17 @@ class Watcher(threading.Thread):
                 self._emit("counters", {})
                 return True
             self._say(logbook.WARN, f"Could not lock in {name}")
+            return False
+
+        if intent.kind == IntentKind.BAN_CHAMPION:
+            name = self.catalog.name_of(intent.champion_id) or intent.champion_id
+            if cs.ban(client, intent.action_id, intent.champion_id):
+                self.settings.bans_total = getattr(self.settings, "bans_total", 0) + 1
+                self._say(logbook.OK, f"Champion banned: {name}")
+                self._emit("action", {"text": f"Banned {name}", "level": logbook.OK})
+                self._emit("counters", {})
+                return True
+            self._say(logbook.WARN, f"Could not ban {name}")
             return False
 
         if intent.kind == IntentKind.SEND_CHAT:

@@ -32,6 +32,12 @@ class SettingsTest(unittest.TestCase):
         settings.sound_file = r"C:\Users\miska\cue.mp3"
         settings.launch_minimized = True
         settings.accepted_total = 12
+        settings.lock_delay = 4.0
+        settings.auto_ban = True
+        settings.preferred_ban_champion_id = 157
+        settings.preferred_ban_champion_name = "Yasuo"
+        settings.respect_ally_hover = True
+        settings.role_champions = {"mid": {"preferred_champion_id": 518}}
         settings.save(self.path)
 
         reloaded = Settings.load(self.path)
@@ -40,6 +46,12 @@ class SettingsTest(unittest.TestCase):
         self.assertEqual(reloaded.preferred_champion_name, "Neeko")
         self.assertEqual(reloaded.backup_champion_id, 103)
         self.assertTrue(reloaded.auto_pick)
+        self.assertEqual(reloaded.lock_delay, 4.0)
+        self.assertTrue(reloaded.auto_ban)
+        self.assertEqual(reloaded.preferred_ban_champion_id, 157)
+        self.assertEqual(reloaded.preferred_ban_champion_name, "Yasuo")
+        self.assertTrue(reloaded.respect_ally_hover)
+        self.assertEqual(reloaded.role_champions, {"mid": {"preferred_champion_id": 518}})
         self.assertTrue(reloaded.chat_enabled)
         self.assertEqual(reloaded.chat_message, "hello gl hf")
         self.assertEqual(reloaded.accept_delay, 2.5)

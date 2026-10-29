@@ -195,6 +195,12 @@ class BuildConfigurationTest(unittest.TestCase):
         self.assertTrue(INSTALLER_SUFFIX.endswith("-Setup.exe"))
         self.assertIn("-Setup", script)
 
+    def test_the_installer_handles_silent_mode_restart(self):
+        script = (self.ROOT / "packaging" / "installer.iss").read_text(encoding="utf-8")
+
+        self.assertIn("Check: IsSilent", script)
+        self.assertIn("function IsSilent: Boolean;", script)
+
     def test_the_installer_does_not_delete_user_settings(self):
         script = (self.ROOT / "packaging" / "installer.iss").read_text(encoding="utf-8")
         deletions = [

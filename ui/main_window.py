@@ -38,6 +38,7 @@ from ui.widgets import (
 DRAFT_PHASE_SECONDS = 30.0
 PRIMARY = "primary"
 BACKUP = "backup"
+BAN = "ban"
 
 
 class HeaderBar(QWidget):
@@ -249,6 +250,10 @@ class MainWindow(QWidget):
         self.backup_tile.clicked.connect(lambda: self._open_overlay(BACKUP))
         column.addWidget(self.backup_tile)
 
+        self.ban_tile = ChampionTile("Ban", primary=False)
+        self.ban_tile.clicked.connect(lambda: self._open_overlay(BAN))
+        column.addWidget(self.ban_tile)
+
         self.declare_row = SettingRow(
             "Auto declare", "Hover your champion so the team can see it."
         )
@@ -260,6 +265,12 @@ class MainWindow(QWidget):
         )
         self.lock_row.toggled.connect(self._on_lock)
         column.addWidget(self.lock_row)
+
+        self.ban_row = SettingRow(
+            "Auto ban", "Ban your chosen champion during the ban phase."
+        )
+        self.ban_row.toggled.connect(self._on_ban)
+        column.addWidget(self.ban_row)
 
         column.addSpacing(theme.SPACE_2)
         column.addWidget(Divider())
@@ -330,6 +341,7 @@ class MainWindow(QWidget):
         for key, label in (
             ("primary", "Primary"),
             ("backup", "Backup"),
+            ("ban", "Auto ban"),
             ("declare", "Auto declare"),
             ("lock", "Auto lock-in"),
             ("chat", "Draft chat"),
@@ -359,6 +371,8 @@ class MainWindow(QWidget):
                         bool(settings.preferred_champion_id)),
             "backup": (settings.backup_champion_name or "none",
                        bool(settings.backup_champion_id)),
+            "ban": (settings.preferred_ban_champion_name or ("ON" if getattr(settings, "auto_ban", False) else "OFF"),
+                    getattr(settings, "auto_ban", False)),
             "declare": ("ON" if settings.auto_declare else "OFF", settings.auto_declare),
             "lock": ("ON" if settings.auto_pick else "OFF", settings.auto_pick),
             "chat": ("ON" if settings.chat_enabled else "OFF", settings.chat_enabled),
@@ -407,9 +421,13 @@ class MainWindow(QWidget):
         settings = self.settings
         self._apply_champion(PRIMARY, settings.preferred_champion_id, settings.preferred_champion_name)
         self._apply_champion(BACKUP, settings.backup_champion_id, settings.backup_champion_name)
+        self._apply_champion(
+            BAN, getattr(settings, "preferred_ban_champion_id", 0), getattr(settings, "preferred_ban_champion_name", "")
+        )
 
         self.declare_row.setChecked(settings.auto_declare)
         self.lock_row.setChecked(settings.auto_pick)
+        self.ban_row.setChecked(getattr(settings, "auto_ban", False))
 
         self.message_edit.blockSignals(True)
         self.message_edit.setText(settings.chat_message)
@@ -423,7 +441,12 @@ class MainWindow(QWidget):
         self._render_stats()
 
     def _apply_champion(self, slot: str, champion_id: int, name: str) -> None:
-        tile = self.primary_tile if slot == PRIMARY else self.backup_tile
+        if slot == PRIMARY:
+            tile = self.primary_tile
+        elif slot == BACKUP:
+            tile = self.backup_tile
+        else:
+            tile = self.ban_tile
         tile.set_champion(champion_id, name)
         if champion_id:
             tile.set_pixmap(self._icons.get(champion_id))
@@ -439,11 +462,15 @@ class MainWindow(QWidget):
         self._apply_champion(
             BACKUP, self.settings.backup_champion_id, self.settings.backup_champion_name
         )
+        self._apply_champion(
+            BAN, getattr(self.settings, "preferred_ban_champion_id", 0), getattr(self.settings, "preferred_ban_champion_name", "")
+        )
 
     def refresh_names_from_catalog(self) -> None:
         for slot, id_attr, name_attr in (
             (PRIMARY, "preferred_champion_id", "preferred_champion_name"),
             (BACKUP, "backup_champion_id", "backup_champion_name"),
+            (BAN, "preferred_ban_champion_id", "preferred_ban_champion_name"),
         ):
             champion_id = getattr(self.settings, id_attr)
             if champion_id:
@@ -464,6 +491,8 @@ class MainWindow(QWidget):
                 self.primary_tile.set_pixmap(pixmap)
             if champion_id == self.settings.backup_champion_id:
                 self.backup_tile.set_pixmap(pixmap)
+            if champion_id == getattr(self.settings, "preferred_ban_champion_id", 0):
+                self.ban_tile.set_pixmap(pixmap)
         if champion_id == self.settings.preferred_champion_id:
             draft = self.stage.draft_scene()
             if kind == champion_art.ICON:
@@ -473,7 +502,12 @@ class MainWindow(QWidget):
 
     def _open_overlay(self, slot: str) -> None:
         self._picking = slot
-        heading = "Choose your champion" if slot == PRIMARY else "Choose a backup champion"
+        if slot == PRIMARY:
+            heading = "Choose your champion"
+        elif slot == BACKUP:
+            heading = "Choose a backup champion"
+        else:
+            heading = "Choose a ban champion"
         self.overlay.setFixedWidth(theme.WINDOW_WIDTH - 2 * theme.SPACE_5)
         self.overlay.adjustSize()
         self.overlay.move(
@@ -491,9 +525,12 @@ class MainWindow(QWidget):
         if slot == PRIMARY:
             self.settings.preferred_champion_id = champion_id
             self.settings.preferred_champion_name = name
-        else:
+        elif slot == BACKUP:
             self.settings.backup_champion_id = champion_id
             self.settings.backup_champion_name = name
+        else:
+            self.settings.preferred_ban_champion_id = champion_id
+            self.settings.preferred_ban_champion_name = name
         self._apply_champion(slot, champion_id, name)
         self._close_overlay()
         self._save()
@@ -515,6 +552,10 @@ class MainWindow(QWidget):
 
     def _on_lock(self, value: bool) -> None:
         self.settings.auto_pick = value
+        self._save()
+
+    def _on_ban(self, value: bool) -> None:
+        self.settings.auto_ban = value
         self._save()
 
     def _on_chat(self, value: bool) -> None:
@@ -551,10 +592,14 @@ class MainWindow(QWidget):
         self.pause_toggled.emit(paused)
 
     def _render_stats(self) -> None:
-        self.session_stats.setText(
-            f"{self.settings.accepted_total} queues accepted   ·   "
-            f"{self.settings.picks_total} champions locked in"
-        )
+        bans = getattr(self.settings, "bans_total", 0)
+        parts = [
+            f"{self.settings.accepted_total} queues accepted",
+            f"{self.settings.picks_total} champions locked in",
+        ]
+        if bans > 0:
+            parts.append(f"{bans} banned")
+        self.session_stats.setText("   ·   ".join(parts))
         self._render_playing_summary()
 
     def refresh_counters(self) -> None:
