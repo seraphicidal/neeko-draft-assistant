@@ -1,5 +1,5 @@
 
-__version__ = "1.0.7"
+__version__ = "1.0.8"
 
 APP_NAME = "Neeko's Little Draft Assistant"
 APP_SHORT_NAME = "Neeko Draft Assistant"
