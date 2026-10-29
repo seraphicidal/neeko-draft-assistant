@@ -13,7 +13,7 @@ from core import updater
 from core.logbook import LogBook
 from core.sound import Cue
 from core.settings import CONFIG_DIR, Settings
-from core.version import APP_NAME, GITHUB_URL, __version__
+from core.version import APP_NAME, APP_USER_MODEL_ID, GITHUB_URL, __version__
 from core.watcher import Watcher
 from league.champions import Catalog
 from ui import assets, theme
@@ -35,10 +35,17 @@ class EventBridge(QObject):
 
 class Application:
     def __init__(self, argv: list[str] | None = None) -> None:
+        if sys.platform == "win32":
+            try:
+                import ctypes
+
+                ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_USER_MODEL_ID)
+            except Exception:
+                pass
         self.qt = QApplication(argv if argv is not None else sys.argv)
         self.qt.setApplicationName(APP_NAME)
         self.qt.setApplicationVersion(__version__)
-        self.qt.setWindowIcon(QIcon(str(assets.ICON)))
+        self.qt.setWindowIcon(assets.app_icon())
         self.qt.setStyleSheet(theme.stylesheet())
         self.qt.setQuitOnLastWindowClosed(False)
 

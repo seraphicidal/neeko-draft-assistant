@@ -12,6 +12,15 @@ USER_NEEKO = program_dir() / "neeko"
 ICON = ASSETS / "icon.ico"
 ICON_PNG = ASSETS / "icon.png"
 
+
+def app_icon():
+    from PySide6.QtGui import QIcon
+
+    icon = QIcon(str(ICON))
+    if ICON_PNG.exists():
+        icon.addFile(str(ICON_PNG))
+    return icon
+
 FLOWER = NEEKO / "flower.png"
 HERO_BG = NEEKO / "hero_bg.png"
 

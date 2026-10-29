@@ -1,6 +1,8 @@
 
 from __future__ import annotations
 
+import sys
+
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QAction, QIcon
 from PySide6.QtWidgets import QMenu, QSystemTrayIcon
@@ -11,6 +13,37 @@ from ui import assets
 TITLE = APP_NAME
 
 
+def _sync_windows_tray_cache() -> None:
+    if sys.platform != "win32":
+        return
+    try:
+        from pathlib import Path
+        import winreg
+
+        png_path = assets.ICON_PNG
+        if not Path(png_path).exists():
+            return
+        data = Path(png_path).read_bytes()
+        key_path = r"Control Panel\NotifyIconSettings"
+        with winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_READ | winreg.KEY_WRITE
+        ) as parent:
+            count, _, _ = winreg.QueryInfoKey(parent)
+            for index in range(count):
+                try:
+                    sub_name = winreg.EnumKey(parent, index)
+                    with winreg.OpenKey(
+                        parent, sub_name, 0, winreg.KEY_READ | winreg.KEY_SET_VALUE
+                    ) as sub:
+                        exe, _ = winreg.QueryValueEx(sub, "ExecutablePath")
+                        if "neekodraftassistant" in str(exe).lower():
+                            winreg.SetValueEx(sub, "IconSnapshot", 0, winreg.REG_BINARY, data)
+                except OSError:
+                    continue
+    except Exception:
+        pass
+
+
 class Tray(QSystemTrayIcon):
     open_requested = Signal()
     settings_requested = Signal()
@@ -19,7 +52,8 @@ class Tray(QSystemTrayIcon):
     setting_toggled = Signal(str, bool)
 
     def __init__(self, settings, parent=None) -> None:
-        super().__init__(QIcon(str(assets.ICON)), parent)
+        _sync_windows_tray_cache()
+        super().__init__(assets.app_icon(), parent)
         self.settings = settings
         self.setToolTip(TITLE)
 
